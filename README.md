@@ -8,7 +8,7 @@ Bixi sharing system for SOEN 343
 | Youssef Yassa   | 40265083       | [YoussefYassa7112](https://github.com/YoussefYassa7112) |
 | Tristan Girardi | 40272203       | [TristanGirardi](https://github.com/TristanGirardi)     |
 | Mohamad Addasi  | 40278616       | [Moe1177](https://github.com/Moe1177)                   |
-| Youssef Youssef | 40287584       | [Youssef8811](https://github.com/Youssef8811)         |
+| Youssef Youssef | 40285384       | [Youssef8811](https://github.com/Youssef8811)         |
 | Fouad Elian     | 40273045       | [FouadElian](https://github.com/FouadElian)             |
 | Junior Boni     | 40287501       | [RealBJr](https://github.com/RealBJr)                   |
 
