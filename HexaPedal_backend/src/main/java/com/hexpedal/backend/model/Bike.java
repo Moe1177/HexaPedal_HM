@@ -5,7 +5,7 @@ import java.time.LocalTime;
 
 public class Bike {
     private int id;
-    private String bikeStatus;
+    private BikeStatus bikeStatus;
     private String type;
     private LocalDate reservationExpDate;
     private LocalTime reservationExpTime;  
@@ -14,7 +14,7 @@ public class Bike {
     public Bike(String type) {
         this.id = ++idcounter;
         this.type = type;
-        this.bikeStatus = "available";
+        this.bikeStatus = BikeStatus.available;
         this.reservationExpDate = null;
         this.reservationExpTime = null;
 
@@ -31,11 +31,11 @@ public class Bike {
         this.id = id;
     }
 
-    public String getBikeStatus() {
+    public BikeStatus getBikeStatus() {
         return bikeStatus;
     }
 
-    public void setBikeStatus(String bikeStatus) {
+    public void setBikeStatus(BikeStatus bikeStatus) {
         this.bikeStatus = bikeStatus;
     }
 
@@ -62,8 +62,6 @@ public class Bike {
     public void setReservationExpTime(LocalTime reservationExpTime) {
         this.reservationExpTime = reservationExpTime;
     }
-    public boolean isReserved() {
-        return this.bikeStatus.equals("reserved");
-    }
+ 
 
 }
