@@ -42,7 +42,7 @@ public class ReservationService {
 
         var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available).orElseThrow(() -> new IllegalStateException("Bike is not available for reservation."));
 
-        dockRepo.findByBikeId(bike.getId()).orElseThrow(() -> new IllegalStateException("Bike must be docked to be reserved."));
+        dockRepo.findByBike_Id(bike.getId()).orElseThrow(() -> new IllegalStateException("Bike must be docked to be reserved."));
 
        
         bike.setBikeStatus(BikeStatus.reserved);
@@ -75,7 +75,7 @@ public class ReservationService {
         }
 
 
-        var dock = dockRepo.findByBikeId(bikeId).orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+        var dock = dockRepo.findByBike_Id(bikeId).orElseThrow(() -> new IllegalStateException("Bike is not docked."));
         dock.setBike(null);
         dockRepo.save(dock);
 
@@ -96,7 +96,7 @@ public class ReservationService {
         }
 
 
-        var emptyDock = dockRepo.findFirstByStationIdAndBikeIsNullOrderByIdAsc(stationId).orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
+        var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId).orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
         emptyDock.setBike(bike);
         dockRepo.save(emptyDock);
         bike.setBikeStatus(BikeStatus.available);
