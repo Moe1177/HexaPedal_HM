@@ -14,6 +14,11 @@ public class Dock {
     @JoinColumn(name = "bike_id", unique = true)
     private Bike bike;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "station_id", nullable = false)
+    private DockingStation station;
+
+
 
     public Dock() {
 

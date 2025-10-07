@@ -11,11 +11,11 @@ import java.util.Optional;
 
 public interface DockRepository extends CrudRepository<Dock,Long> {
     List<Dock> findByStation(DockingStation station);
-    List<Dock> findByStationId(Long stationId);
-    long countByStationId(Long stationId);
-    long countByStationIdAndBikeIsNull(Long stationId);       
-    long countByStationIdAndBikeIsNotNull(Long stationId);    
-    Optional<Dock> findFirstByStationIdAndBikeIsNullOrderByIdAsc(Long stationId);
+    List<Dock> findByStation_Id(Long stationId);
+    long countByStation_Id(Long stationId);
+    long countByStation_IdAndBikeIsNull(Long stationId);
+    long countByStation_IdAndBikeIsNotNull(Long stationId);
+    Optional<Dock> findFirstByStation_IdAndBikeIsNullOrderByIdAsc(Long stationId);
     Optional<Dock> findByBike(Bike bike);
-    Optional<Dock> findByBikeId(Integer bikeId);
+    Optional<Dock> findByBike_Id(Integer bikeId);
 }
