@@ -106,8 +106,12 @@ public class DockingStation {
         this.docks = (docks != null) ? docks : new ArrayList<>();
     }
 
-    public LocalTime getReservationholdTime() { return reservationholdTime; }
-    public void setReservationholdTime(LocalTime reservationholdTime) { this.reservationholdTime = reservationholdTime; }
+    public LocalTime getReservationholdTime() { 
+        return reservationholdTime; 
+    }
+    public void setReservationholdTime(LocalTime reservationholdTime) { 
+        this.reservationholdTime = reservationholdTime; 
+    }
 
   
     public int getNumberOfBikesDocked() {
