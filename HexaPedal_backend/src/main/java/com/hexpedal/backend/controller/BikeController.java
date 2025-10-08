@@ -21,7 +21,6 @@ public class BikeController {
     }
     @PostMapping
     public ResponseEntity<Bike> createBike(@RequestBody Bike bike) {
-        // make sure new bikes start as available
         bike.setBikeStatus(BikeStatus.available);
         Bike saved = bikeRepo.save(bike);
         return ResponseEntity.status(201).body(saved);
