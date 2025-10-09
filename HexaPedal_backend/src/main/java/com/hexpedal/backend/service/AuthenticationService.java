@@ -1,18 +1,20 @@
 package com.hexpedal.backend.service;
 
-import com.hexpedal.backend.dto.LoginUserDto;
-import com.hexpedal.backend.dto.RegisterUserDto;
-import com.hexpedal.backend.dto.VerifyUserDto;
-import com.hexpedal.backend.model.User;
-import com.hexpedal.backend.repository.UserRepository;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Random;
+
+import com.hexpedal.backend.model.Rider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Random;
+import com.hexpedal.backend.dto.LoginUserDto;
+import com.hexpedal.backend.dto.RegisterUserDto;
+import com.hexpedal.backend.dto.VerifyUserDto;
+import com.hexpedal.backend.model.User;
+import com.hexpedal.backend.repository.UserRepository;
 
 @Service
 public class AuthenticationService {
@@ -29,12 +31,28 @@ public class AuthenticationService {
     }
 
     public User signup(RegisterUserDto input){
-        User user = new User(input.getFullName(),input.getAddress(), input.getRole(),input.getUsername(),input.getEmail(), passwordEncoder.encode(input.getPassword()));
-        user.setVerificationCode(generateVerificationCode());
-        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
-        user.setEnabled(false);
-        sendVerificationEmail(user);
-        return userRepository.save(user);
+        if (userRepository.findByEmail(input.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already in use");
+        }
+        if (userRepository.findByUsername(input.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already in use");
+        }
+//        User user = new User(input.getFullName(),input.getAddress(), input.getRole(),input.getUsername(),input.getEmail(), passwordEncoder.encode(input.getPassword()));
+//        user.setVerificationCode(generateVerificationCode());
+//        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
+//        user.setEnabled(false);
+//        sendVerificationEmail(user);
+        Rider rider = Rider.builder()
+                .fullName(input.getFullName())
+                .address(input.getAddress())
+                .username(input.getUsername())
+                .email(input.getEmail())
+                .password(passwordEncoder.encode(input.getPassword()))
+                .enabled(false)
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+        return userRepository.save(rider);
     }
 
     public User authenticate(LoginUserDto input){
@@ -106,5 +124,13 @@ public class AuthenticationService {
         Random random = new Random();
         int code = 100000 + random.nextInt(900000);
         return String.valueOf(code);
+    }
+
+    public boolean emailExists(String email) {
+        return userRepository.findByEmail(email).isPresent();
+    }
+
+    public boolean usernameExists(String username) {
+        return userRepository.findByUsername(username).isPresent();
     }
 }

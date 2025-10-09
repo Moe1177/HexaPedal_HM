@@ -1,8 +1,8 @@
 package com.hexpedal.backend.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -14,6 +14,9 @@ import java.util.Collection;
 @Table(name = "users")
 @Getter
 @Setter
+@SuperBuilder
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "role")
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -22,8 +25,6 @@ public class User implements UserDetails {
     private String fullName;
     @Column(nullable = false)
     private String address;
-    @Column(nullable = false)
-    private String role; // "USER", "OPERATOR"
     @Column(unique=true,nullable = false)
     private String username;
     @Column(unique=true,nullable = false)
@@ -36,10 +37,10 @@ public class User implements UserDetails {
     @Column(name="verification_expiration")
     private LocalDateTime verificationCodeExpiresAt;
 
-    public User(String fullName, String address, String role, String username, String email, String password) {
+    public User(String fullName, String address, String username, String email, String password) {
         this.fullName = fullName;
         this.address = address;
-        this.role = role;
+//        this.role = role;
         this.username = username;
         this.email = email;
         this.password = password;
