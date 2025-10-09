@@ -37,11 +37,7 @@ public class AuthenticationService {
         if (userRepository.findByUsername(input.getUsername()).isPresent()) {
             throw new RuntimeException("Username already in use");
         }
-//        User user = new User(input.getFullName(),input.getAddress(), input.getRole(),input.getUsername(),input.getEmail(), passwordEncoder.encode(input.getPassword()));
-//        user.setVerificationCode(generateVerificationCode());
-//        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
-//        user.setEnabled(false);
-//        sendVerificationEmail(user);
+
         Rider rider = Rider.builder()
                 .fullName(input.getFullName())
                 .address(input.getAddress())
@@ -52,6 +48,7 @@ public class AuthenticationService {
                 .verificationCode(generateVerificationCode())
                 .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
                 .build();
+        sendVerificationEmail(rider);
         return userRepository.save(rider);
     }
 
