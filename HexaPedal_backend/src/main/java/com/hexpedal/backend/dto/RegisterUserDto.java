@@ -8,10 +8,7 @@ import lombok.Setter;
 public class RegisterUserDto {
     private String fullName;
     private String address;
-    private String role; // "USER", "OPERATOR"
     private String username;
     private String email;
     private String password;
-
-
 }
