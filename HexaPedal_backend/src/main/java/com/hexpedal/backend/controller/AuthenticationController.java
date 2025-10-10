@@ -1,5 +1,6 @@
 package com.hexpedal.backend.controller;
 
+import com.hexpedal.backend.dto.RegisterOperatorDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +32,16 @@ public class AuthenticationController {
     public ResponseEntity<?> register(@RequestBody RegisterUserDto registerUserdto){
         try {
             User registerUser = authenticationService.signup(registerUserdto);
+            return ResponseEntity.ok(registerUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/operator/signup")
+    public ResponseEntity<?> registerOperator(@RequestBody RegisterOperatorDto registerOperatorDto){
+        try {
+            User registerUser = authenticationService.operatorSignup(registerOperatorDto);
             return ResponseEntity.ok(registerUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

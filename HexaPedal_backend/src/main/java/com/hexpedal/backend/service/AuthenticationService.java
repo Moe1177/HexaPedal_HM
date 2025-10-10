@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
+import com.hexpedal.backend.dto.RegisterOperatorDto;
+import com.hexpedal.backend.model.Operator;
 import com.hexpedal.backend.model.Rider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -50,6 +52,29 @@ public class AuthenticationService {
                 .build();
         sendVerificationEmail(rider);
         return userRepository.save(rider);
+    }
+
+    public User operatorSignup(RegisterOperatorDto input){
+        if (userRepository.findByEmail(input.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already in use");
+        }
+        if (userRepository.findByUsername(input.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already in use");
+        }
+
+        Operator operator = Operator.builder()
+                .fullName(input.getFullName())
+                .address(input.getAddress())
+                .username(input.getUsername())
+                .email(input.getEmail())
+                .password(passwordEncoder.encode(input.getPassword()))
+                .enabled(false)
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
+                .truck(input.getTruck())
+                .build();
+        sendVerificationEmail(operator);
+        return userRepository.save(operator);
     }
 
     public User authenticate(LoginUserDto input){
