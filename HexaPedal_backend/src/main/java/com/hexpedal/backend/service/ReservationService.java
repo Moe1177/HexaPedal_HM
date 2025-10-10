@@ -51,7 +51,7 @@ public class ReservationService {
         bike.setReservationExpDate(expiry.toLocalDate());
         bike.setReservationExpTime(expiry.toLocalTime());
 
-        // 6) save
+        
         bikeRepo.save(bike);
     }
 

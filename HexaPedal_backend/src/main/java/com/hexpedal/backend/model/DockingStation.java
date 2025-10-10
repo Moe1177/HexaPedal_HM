@@ -20,9 +20,11 @@ public class DockingStation {
     @Column(nullable = false)
     private DockingStationStates status;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PositionStates position;
+    private double latitude;
+
+    @Column(nullable = false)
+    private double longitude;
 
     @Column(nullable = false)
     private String address;
@@ -30,90 +32,56 @@ public class DockingStation {
     @Column(nullable = false)
     private int bikeCapacity;
 
- 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "station_id")
     private List<Dock> docks = new ArrayList<>();
 
-
     private LocalTime reservationholdTime;
 
- 
     public DockingStation() {}
 
-    public DockingStation(String name, PositionStates position, String address, int bikeCapacity) {
+    public DockingStation(String name, double latitude, double longitude, String address, int bikeCapacity) {
         this.name = name;
         this.status = DockingStationStates.active;
-        this.position = position;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.address = address;
         this.bikeCapacity = bikeCapacity;
         this.docks = new ArrayList<>();
-    
+
         for (int i = 0; i < bikeCapacity; i++) {
             this.docks.add(new Dock());
         }
     }
-    
-    
 
-    public Long getId() {
-         return id; 
-    }
-    public void setId(Long id) { 
-        this.id = id;
-    }
 
-    public String getName() { 
-        return name;
-    }
-    public void setName(String name) { 
-        this.name = name;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-   
-    public DockingStationStates getStationState() { 
-        return status;
-    }
-    public void setStationState(DockingStationStates status) { 
-        this.status = status;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public PositionStates getPosition() { 
-        return position;
-    }
-    public void setPosition(PositionStates position) { 
-        this.position = position;
-    }
+    public DockingStationStates getStationState() { return status; }
+    public void setStationState(DockingStationStates status) { this.status = status; }
 
-    public String getAddress() { 
-        return address;
-    }
-    public void setAddress(String address) { 
-        this.address = address;
-    }
+    public double getLatitude() { return latitude; }
+    public void setLatitude(double latitude) { this.latitude = latitude; }
 
-    public int getBikeCapacity() { 
-        return bikeCapacity;
-    }
-    public void setBikeCapacity(int bikeCapacity) { 
-        this.bikeCapacity = bikeCapacity;
-    }
+    public double getLongitude() { return longitude; }
+    public void setLongitude(double longitude) { this.longitude = longitude; }
 
-    public List<Dock> getDocks() { 
-        return docks;
-    }
-    public void setDocks(List<Dock> docks) {
-        this.docks = (docks != null) ? docks : new ArrayList<>();
-    }
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
 
-    public LocalTime getReservationholdTime() { 
-        return reservationholdTime; 
-    }
-    public void setReservationholdTime(LocalTime reservationholdTime) { 
-        this.reservationholdTime = reservationholdTime; 
-    }
+    public int getBikeCapacity() { return bikeCapacity; }
+    public void setBikeCapacity(int bikeCapacity) { this.bikeCapacity = bikeCapacity; }
 
-  
+    public List<Dock> getDocks() { return docks; }
+    public void setDocks(List<Dock> docks) { this.docks = (docks != null) ? docks : new ArrayList<>(); }
+
+    public LocalTime getReservationholdTime() { return reservationholdTime; }
+    public void setReservationholdTime(LocalTime reservationholdTime) { this.reservationholdTime = reservationholdTime; }
+
     public int getNumberOfBikesDocked() {
         int count = 0;
         for (Dock d : docks) {
@@ -122,7 +90,6 @@ public class DockingStation {
         return count;
     }
 
-  
     public boolean hasEmptyDock() {
         for (Dock d : docks) {
             if (d != null && d.isEmpty()) return true;
@@ -130,7 +97,6 @@ public class DockingStation {
         return false;
     }
 
-    
     public Dock findEmptyDock() {
         for (Dock d : docks) {
             if (d != null && d.isEmpty()) return d;
@@ -138,7 +104,6 @@ public class DockingStation {
         return null;
     }
 
-   
     public void addDock(Dock dock) {
         if (dock == null) return;
         if (docks.size() >= bikeCapacity) {
@@ -147,7 +112,6 @@ public class DockingStation {
         docks.add(dock);
     }
 
-    
     public void removeDock(Dock dock) {
         if (dock == null) return;
         if (!dock.isEmpty()) {
@@ -168,5 +132,4 @@ public class DockingStation {
         }
         return dock.removeBike();
     }
-
 }

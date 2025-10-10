@@ -26,6 +26,7 @@ public class BikeController {
         return ResponseEntity.status(201).body(saved);
     }
 
+
     @GetMapping
     public ResponseEntity<?> getAllBikes() {
         return ResponseEntity.ok(bikeRepo.findAll());
