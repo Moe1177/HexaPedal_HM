@@ -31,8 +31,15 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
-                        .anyRequest().authenticated()
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/api/bikes/**").permitAll()
+                .requestMatchers("/api/stations/**").permitAll()
+                .requestMatchers("/api/reservations/**").permitAll()
+                .requestMatchers("/api/trips/**").permitAll()
+                .requestMatchers("/api/docks/**").permitAll()
+                .anyRequest().authenticated()
+                
+
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
