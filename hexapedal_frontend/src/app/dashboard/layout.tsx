@@ -1,6 +1,6 @@
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
-        <section>
+        <section className="h-full">
             {children}
         </section>
     );
