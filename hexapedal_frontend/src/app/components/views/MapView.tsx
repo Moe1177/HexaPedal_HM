@@ -4,8 +4,6 @@ import MapServer from "../ui/map/MapWrapper";
 
 export default function MapView() {
     return (
-        <div>
-            <MapServer />
-        </div>
+        <MapServer />
     );
 }

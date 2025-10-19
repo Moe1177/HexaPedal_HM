@@ -6,6 +6,7 @@ import useMapConfig from '@/hooks/useMapConfig';
 
 export default function MapClient() {
     const [mapConfig, setMapConfig] = useMapConfig();
+
     return (
         <MapContainer {...mapConfig}>
             <TileLayer
