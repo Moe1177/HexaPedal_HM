@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,6 +14,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
@@ -25,26 +28,47 @@ public class SecurityConfiguration {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
-                .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/api/bikes/**").permitAll()
-                .requestMatchers("/api/stations/**").permitAll()
-                .requestMatchers("/api/reservations/**").permitAll()
-                .requestMatchers("/api/trips/**").permitAll()
-                .requestMatchers("/api/docks/**").permitAll()
-                .anyRequest().authenticated()
-                
+   
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  http
+    .csrf(csrf -> csrf.disable())
+    .cors(cors -> {})
+    .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    .exceptionHandling(ex -> ex
+        .authenticationEntryPoint((req, res, ex2) -> {
+            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        })
+    )
+    .authorizeHttpRequests(auth -> auth
+        
+        .requestMatchers("/auth/**").permitAll()
 
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        return http.build();
-    }
+        
+        .requestMatchers("/api/reservations/**", "/api/trips/**")
+            .hasAnyRole("RIDER", "OPERATOR")
+
+        
+        .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*")
+            .hasAnyRole("RIDER", "OPERATOR")
+
+   
+        .requestMatchers(HttpMethod.GET, "/api/stations/**", "/api/bikes/**", "/api/docks/**").permitAll()
+
+       
+        .requestMatchers(HttpMethod.POST,   "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+        .requestMatchers(HttpMethod.PUT,    "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+        .requestMatchers(HttpMethod.PATCH,  "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+        .requestMatchers(HttpMethod.DELETE, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+
+        .anyRequest().authenticated()
+    )
+    .authenticationProvider(authenticationProvider)
+    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+  return http.build();
+}
+    
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
