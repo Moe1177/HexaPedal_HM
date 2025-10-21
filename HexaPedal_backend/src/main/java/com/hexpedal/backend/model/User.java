@@ -40,7 +40,7 @@ public class User implements UserDetails {
     public User(String fullName, String address, String username, String email, String password) {
         this.fullName = fullName;
         this.address = address;
-//        this.role = role;
+
         this.username = username;
         this.email = email;
         this.password = password;
@@ -58,6 +58,10 @@ public class User implements UserDetails {
     public boolean isAccountNonExpired() {
         return true;
     }
+    @Override
+public String getUsername() {
+    return this.getEmail(); 
+}
 
     @Override
     public boolean isAccountNonLocked() {
