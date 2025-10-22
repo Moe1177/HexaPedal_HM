@@ -12,7 +12,7 @@ export const fallBackMapConfig = {
 
 export default async function loadMapConfig() {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/map-config`);
+        const response = await fetch(`${API_BASE_URL}/api/map/config`);
         const mapConfig = await response.json();
 
         return {
