@@ -46,6 +46,7 @@ public class DockBikeController {
         if (!station.getDocks().contains(dock)) {
             throw new IllegalStateException("This dock does not belong to the specified station.");
         }
+      
 
         if (!dock.isEmpty()) {
             throw new IllegalStateException("This dock is already occupied.");
@@ -53,13 +54,14 @@ public class DockBikeController {
 
         Bike bike = bikeRepo.findById(bikeId).orElseThrow(() -> new EntityNotFoundException("Bike not found: " + bikeId));
 
-        dock.setBike(bike);
-        dockRepo.save(dock);
+    dock.setBike(bike);
+    dockRepo.save(dock);
 
-        bike.setBikeStatus(com.hexpedal.backend.model.BikeStatus.available);
-        bikeRepo.save(bike);
+  
+    bike.setBikeStatus(com.hexpedal.backend.model.BikeStatus.available);
+    bikeRepo.save(bike);
 
-        return ResponseEntity.noContent().build();
+    return ResponseEntity.noContent().build();
     }
 
 

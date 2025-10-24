@@ -18,4 +18,5 @@ public interface DockRepository extends CrudRepository<Dock,Long> {
     Optional<Dock> findFirstByStation_IdAndBikeIsNullOrderByIdAsc(Long stationId);
     Optional<Dock> findByBike(Bike bike);
     Optional<Dock> findByBike_Id(Integer bikeId);
+    
 }
