@@ -75,7 +75,6 @@ public class User implements UserDetails {
     @Override
     @JsonIgnore
     public String getUsername() {
-        // ✅ Always use email for authentication (to match JWT subject)
         return this.email;
     }
 

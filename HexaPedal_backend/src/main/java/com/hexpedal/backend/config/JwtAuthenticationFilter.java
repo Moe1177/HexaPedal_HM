@@ -46,9 +46,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String subjectEmail;
 
         try {
-            subjectEmail = jwtService.extractUsername(jwt); // now returns email (sub)
+            subjectEmail = jwtService.extractUsername(jwt); // this returns email so that it can match with the JWT
         } catch (JwtException | IllegalArgumentException e) {
-            // Bad/expired/malformed token → 401 and stop the chain
+            
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
             return;
