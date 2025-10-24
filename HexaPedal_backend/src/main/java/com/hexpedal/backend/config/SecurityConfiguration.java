@@ -7,8 +7,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-// (optional) uncomment if you also use @PreAuthorize on methods
-// import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -20,7 +18,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-// @EnableMethodSecurity // <- optional, if you annotate controllers with @PreAuthorize
+
 public class SecurityConfiguration {
 
     private final AuthenticationProvider authenticationProvider;
@@ -42,14 +40,13 @@ public class SecurityConfiguration {
                 res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             }))
             .authorizeHttpRequests(auth -> auth
-                // open auth endpoints
+       
                 .requestMatchers("/auth/**").permitAll()
 
-                // riders & operators can make reservations and trips
                 .requestMatchers("/api/reservations/**", "/api/trips/**")
                     .hasAnyRole("RIDER", "OPERATOR")
 
-                // riders & operators can DOCK a bike (specific POST) — order matters
+
                 .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*")
                     .hasAnyRole("RIDER", "OPERATOR")
 
@@ -57,7 +54,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
                     .permitAll()
 
-                // operator-only mutations
+              
                 .requestMatchers(HttpMethod.POST,   "/api/stations/**", "/api/bikes/**", "/api/docks/**")
                     .hasRole("OPERATOR")
                 .requestMatchers(HttpMethod.PUT,    "/api/stations/**", "/api/bikes/**", "/api/docks/**")
@@ -67,7 +64,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.DELETE, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
                     .hasRole("OPERATOR")
 
-                // everything else requires authentication
+             
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider)

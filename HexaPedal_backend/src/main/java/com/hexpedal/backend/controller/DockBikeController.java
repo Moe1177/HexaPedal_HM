@@ -3,12 +3,18 @@ package com.hexpedal.backend.controller;
 import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.Dock;
 import com.hexpedal.backend.model.DockingStation;
+import com.hexpedal.backend.model.DockingStationStates;
 import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import jakarta.persistence.EntityNotFoundException;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+
 
 @RestController
 @RequestMapping("/api/docks")
@@ -31,6 +37,10 @@ public class DockBikeController {
 
         DockingStation station = stationRepo.findById(stationId).orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
 
+        if (station.getStationState() == DockingStationStates.out_of_service) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot dock: station is out of service.");
+        }
+
         Dock dock = dockRepo.findById((long) dockId).orElseThrow(() -> new EntityNotFoundException("Dock not found: " + dockId));
 
         if (!station.getDocks().contains(dock)) {
@@ -51,4 +61,6 @@ public class DockBikeController {
 
         return ResponseEntity.noContent().build();
     }
+
+
 }
