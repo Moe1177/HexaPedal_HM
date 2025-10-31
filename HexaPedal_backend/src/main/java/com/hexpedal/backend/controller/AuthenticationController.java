@@ -48,6 +48,16 @@ public class AuthenticationController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+    @PostMapping("/signup/operator")
+public ResponseEntity<?> registerOperator(@RequestBody RegisterUserDto dto) {
+    try {
+        User op = authenticationService.createOperator(dto);
+        return ResponseEntity.ok(op);
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(e.getMessage());
+    }
+}
+
 
     @PostMapping("/verify")
     public ResponseEntity<?> verify(@RequestBody VerifyUserDto verifyUserDto) {

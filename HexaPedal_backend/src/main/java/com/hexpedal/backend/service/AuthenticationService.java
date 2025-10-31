@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.hexpedal.backend.model.Operator;
 
 import com.hexpedal.backend.dto.LoginUserDto;
 import com.hexpedal.backend.dto.RegisterUserDto;
@@ -85,6 +86,26 @@ public class AuthenticationService {
             throw new RuntimeException("User not found");
         }
     }
+    public User createOperator(RegisterUserDto input) {
+        if (userRepository.findByEmail(input.getEmail()).isPresent())
+            throw new RuntimeException("Email already in use");
+        if (userRepository.findByUsername(input.getUsername()).isPresent())
+            throw new RuntimeException("Username already in use");
+    
+        Operator op = Operator.builder()
+                .fullName(input.getFullName())
+                .address(input.getAddress())
+                .username(input.getUsername())
+                .email(input.getEmail())
+                .password(passwordEncoder.encode(input.getPassword()))
+                .enabled(false) 
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+    
+        return userRepository.save(op);
+    }
+    
 
     public void resendVerificationCode(String email) {
         Optional<User> optionalUser = userRepository.findByEmail(email);
