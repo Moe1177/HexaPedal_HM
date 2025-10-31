@@ -12,4 +12,6 @@ public interface DockingStationRepository extends CrudRepository<DockingStation,
     Optional<DockingStation> findByName(String name);
     List<DockingStation> findByLatitudeAndLongitude(double latitude, double longitude);
     Optional<DockingStation> findByNameAndLatitudeAndLongitude(String name, double latitude, double longitude);
+    boolean existsByLatitudeAndLongitude(double latitude, double longitude);
+
 }
