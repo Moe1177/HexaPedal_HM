@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import VerifyForm from "@/components/VerifyForm";
+import VerifyForm from "@/app/components/ui/VerifyForm";
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();

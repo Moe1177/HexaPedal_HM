@@ -1,6 +1,6 @@
-import LoginForm from "@/components/LoginForm";
+import LoginForm from "@/app/components/ui/LoginForm";
 
-export default function Login() {
+export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center justify-center p-6">
       <div className="w-full rounded-lg border border-gray-800 bg-gray-950 p-6 shadow">
