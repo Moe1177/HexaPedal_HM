@@ -49,7 +49,7 @@ export default function VerifyForm({ initialEmail = "" }: VerifyFormProps) {
         try {
           const text = await res.text();
           message = text || res.statusText || message;
-        } catch {}
+        } catch { }
         throw new Error(message);
       }
 
