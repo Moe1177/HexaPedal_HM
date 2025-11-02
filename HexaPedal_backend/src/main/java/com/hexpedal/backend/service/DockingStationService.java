@@ -4,7 +4,6 @@ import com.hexpedal.backend.model.DockingStation;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 @Service
