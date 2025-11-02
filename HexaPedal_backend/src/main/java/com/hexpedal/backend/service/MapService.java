@@ -1,61 +1,67 @@
 package com.hexpedal.backend.service;
 
+import com.hexpedal.backend.model.DockingStation;
 import com.hexpedal.backend.model.Map;
-import com.hexpedal.backend.model.StationMarker;
-import com.hexpedal.backend.repository.StationMarkerRepository;
+import com.hexpedal.backend.model.MapEntityListener;
+import com.hexpedal.backend.model.MapEntity;
 import jakarta.annotation.PostConstruct;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class MapService {
-
-    private final StationMarkerRepository stationMarkerRepository;
+public class MapService implements MapEntityListener {
     private final SimpMessagingTemplate messagingTemplate;
+    private final DockingStationService dockingStationService;
 
-    public MapService(StationMarkerRepository stationMarkerRepository, SimpMessagingTemplate messagingTemplate) {
-        this.stationMarkerRepository = stationMarkerRepository;
+    public MapService(SimpMessagingTemplate messagingTemplate, DockingStationService dockingStationService) {
         this.messagingTemplate = messagingTemplate;
+        this.dockingStationService = dockingStationService;
+        initMapEntities();
+        initListener();
     }
 
-    @PostConstruct
-    public void initMap() {
-        List<StationMarker> markers = stationMarkerRepository.findAll();
-        Map.getInstance().setStationMarkers(markers);
+    /**
+     * Broadcast updated state to clients subscribed to /bms/station-updates endpoint.
+     * @param state is the updated state of a given Publisher entity
+     */
+    public void update(MapEntity state) {
+        messagingTemplate.convertAndSend("/bms/station-updates", state);
+        // TODO: Remove Debug log
+        System.out.println("Updated the map with this updated state: " + state);
     }
 
-    public String loadMapConfig() {
-        try {
-            URL resource = getClass().getClassLoader().getResource("mapConfig.json");
-            System.out.println("Resource URL: " + resource);
-            if (resource == null) {
-                throw new IOException("mapConfig.json not found in resources");
-            }
-            Path resourcePath = Paths.get(resource.toURI());
-            String content = Files.readString(resourcePath);
-            return content;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load mapConfig.json", e);
+    /**
+     * List all the entities on top of the map.
+     */
+    public List<MapEntity> getMapEntities(){
+        return Map.getInstance().getMapEntities();
+    }
+
+    /**
+     * Turn the docking station into usable entities.
+     * @param stationMarkers list of docking stations
+     */
+    private List<MapEntity> castIntoEntities(List<DockingStation> stationMarkers) {
+        return new ArrayList<>(stationMarkers);
+    }
+
+    /**
+     * Attach the listener to the publisher instance
+     */
+    private void initListener() {
+        for (MapEntity publisher: Map.getInstance().getMapEntities()){
+            publisher.addListener(this);
         }
     }
 
     /**
-     * Update station in cache and broadcast to all connected clients
-     * @param updatedMarker
+     * Load the map entities into the map instance.
      */
-    public void updateMap(StationMarker updatedMarker) {
-        Map.getInstance().updateStationMarker(updatedMarker);
-
-        // Broadcast to all WebSocket clients
-        messagingTemplate.convertAndSend("/bms/station-updates", updatedMarker);
-
-        System.out.println("Station updated and broadcasted: " + updatedMarker.getId());
+    private void initMapEntities() {
+        List<MapEntity> mapEntities = castIntoEntities(dockingStationService.cacheDockingStations());
+        Map.getInstance().setMapEntities(mapEntities);
     }
 }
