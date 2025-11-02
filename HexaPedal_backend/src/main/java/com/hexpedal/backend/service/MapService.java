@@ -4,10 +4,8 @@ import com.hexpedal.backend.model.DockingStation;
 import com.hexpedal.backend.model.Map;
 import com.hexpedal.backend.model.MapEntityListener;
 import com.hexpedal.backend.model.MapEntity;
-import jakarta.annotation.PostConstruct;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
 

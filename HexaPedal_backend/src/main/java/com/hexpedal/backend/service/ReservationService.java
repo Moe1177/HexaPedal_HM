@@ -4,10 +4,7 @@ import java.time.LocalDateTime;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.UserRepository;
-
-
 import org.springframework.stereotype.Service;
-
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
