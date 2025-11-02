@@ -1,8 +1,6 @@
 package com.hexpedal.backend.controller;
 
-import com.hexpedal.backend.service.MapService;
 import com.hexpedal.backend.service.ReservationService;
-import com.hexpedal.backend.service.StationMarkerService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
@@ -17,16 +15,9 @@ import org.springframework.web.bind.annotation.*;
 public class ReservationController {
 
     private final ReservationService reservationService;
-    private final MapService mapService;
-    private final StationMarkerService stationMarkerService;
 
-    public ReservationController(
-            ReservationService reservationService,
-            MapService mapService,
-            StationMarkerService stationMarkerService) {
+    public ReservationController(ReservationService reservationService) {
         this.reservationService = reservationService;
-        this.mapService = mapService;
-        this.stationMarkerService = stationMarkerService;
     }
 
     @PostMapping("/reservations/bikes/{bikeId}")
@@ -35,7 +26,6 @@ public class ReservationController {
             @RequestParam @Email String email
     ) {
         reservationService.reserveBike(email, bikeId);
-        mapService.updateMap(stationMarkerService.getStationForBike(bikeId));
         return ResponseEntity.noContent().build();
     }
 
@@ -45,7 +35,6 @@ public class ReservationController {
             @RequestParam @Email String email
     ) {
         reservationService.cancelReservation(email, bikeId);
-        mapService.updateMap(stationMarkerService.getStationForBike(bikeId));
         return ResponseEntity.noContent().build();
     }
 
@@ -55,7 +44,6 @@ public class ReservationController {
             @RequestParam @Min(1) Long userId
     ) {
         reservationService.startTrip(bikeId, userId);
-        mapService.updateMap(stationMarkerService.getStationForBike(bikeId));
         return ResponseEntity.noContent().build();
     }
 
@@ -66,7 +54,6 @@ public class ReservationController {
             @RequestParam @Min(1) Long stationId
     ) {
         reservationService.endTrip(bikeId, userId, stationId);
-        mapService.updateMap(stationMarkerService.getStationForBike(bikeId));
         return ResponseEntity.noContent().build();
     }
 
