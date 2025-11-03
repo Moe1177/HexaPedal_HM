@@ -5,7 +5,7 @@ export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) throw new Error("useAuth must be used within AuthenticationProvider");
 
-    const { token, } = context;
+    const { token, setToken } = context;
 
     const authFetch = async (
         input: RequestInfo | URL,
@@ -16,5 +16,5 @@ export const useAuth = () => {
         return fetch(input, { ...init, headers });
     };
 
-    return { token, authFetch };
+    return { token, setToken, authFetch };
 };

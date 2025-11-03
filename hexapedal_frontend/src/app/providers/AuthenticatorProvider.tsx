@@ -14,12 +14,20 @@ interface ProviderProps {
 }
 
 export const AuthenticationProvider = ({ children }: ProviderProps) => {
-    const [token, setToken] = useState<string | null>(null);
+    const [token, setToken] = useState<string | null>(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("auth_token");
+        }
+        return null;
+    });
 
     useEffect(() => {
-        const storedToken = localStorage.getItem("auth_token");
-        if (storedToken) setToken(storedToken);
-    }, []);
+        if (token) {
+            localStorage.setItem("auth_token", token);
+        } else {
+            localStorage.removeItem("auth_token");
+        }
+    }, [token]);
 
     return (
         <AuthContext.Provider value={{ token, setToken }}>

@@ -19,7 +19,6 @@ public class MapController {
 
     @GetMapping("/init-map-entities")
     public List<MapEntity> getMapEntities() {
-        System.out.println("getMapEntities has been called");
         return mapService.getMapEntities();
     }
 }

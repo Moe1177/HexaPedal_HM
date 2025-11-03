@@ -1,13 +1,13 @@
 "use client";
 
 import { login } from "@/app/services/authentication/authService";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type LoginFormProps = {
-  onSuccess?: () => void; // optional callback
-};
-
-export default function LoginForm({ onSuccess }: LoginFormProps) {
+export default function LoginForm() {
+  const router = useRouter();
+  const { setToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,8 +34,8 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
 
     setIsSubmitting(true);
     try {
-      await login(email, password); // ✅ use hook
-      onSuccess?.(); // call optional callback
+      await login(email, password, setToken);
+      router.push('/dashboard');
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setErrorMessage(message);
