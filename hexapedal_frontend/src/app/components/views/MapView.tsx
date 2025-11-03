@@ -1,9 +1,11 @@
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import MapServer from "../ui/map/MapWrapper";
+import MapServer from "../ui/map/MapServer";
+import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 
 export default function MapView() {
     return (
-        <MapServer />
+        <MapEntitiesProvider>
+            <MapServer />
+        </MapEntitiesProvider>
     );
 }
