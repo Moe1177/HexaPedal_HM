@@ -1,8 +1,7 @@
-// src/main/java/com/hexpedal/backend/model/Rider.java
 package com.hexpedal.backend.model;
 
-import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.persistence.DiscriminatorValue;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,10 +18,10 @@ import java.util.List;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 @Entity
-@DiscriminatorValue("RIDER")
-public class Rider extends User {
+@DiscriminatorValue("OPERATOR")
+public class Operator extends User {
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_RIDER"));
+        return List.of(new SimpleGrantedAuthority("ROLE_OPERATOR"));
     }
 }

@@ -6,6 +6,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -20,24 +21,33 @@ import java.util.List;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "role")
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
+
     @Column(nullable = false)
     private String fullName;
+
     @Column(nullable = false)
     private String address;
+
     @Column(unique = true, nullable = false)
     private String username;
+
     @Column(unique = true, nullable = false)
     private String email;
+
     @JsonIgnore
     @Column(nullable = false)
     private String password;
+
     private boolean enabled;
+
     @JsonIgnore
     @Column(name = "verification_code")
     private String verificationCode;
+
     @JsonIgnore
     @Column(name = "verification_expiration")
     private LocalDateTime verificationCodeExpiresAt;
@@ -65,7 +75,7 @@ public class User implements UserDetails {
     @Override
     @JsonIgnore
     public String getUsername() {
-        return email; // Using email as username for authentication
+        return this.email;
     }
 
     @Override
