@@ -7,9 +7,7 @@ import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
-
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.repository.BikeRepository;
