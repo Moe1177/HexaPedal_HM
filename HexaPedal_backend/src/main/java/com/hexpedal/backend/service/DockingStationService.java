@@ -1,50 +1,58 @@
 package com.hexpedal.backend.service;
 
+import com.hexpedal.backend.dto.CreateStationRequestDTO;
 import com.hexpedal.backend.model.DockingStation;
+import com.hexpedal.backend.model.DockingStationStates;
 import com.hexpedal.backend.repository.DockingStationRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class DockingStationService {
+    private final DockingStationRepository stationRepo;
 
-    private final DockingStationRepository dockingStationRepository;
+    public DockingStation changeState(long stationId, DockingStationStates state) {
+        DockingStation s = stationRepo.findById(stationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+        if (state == DockingStationStates.out_of_service && s.getNumberOfBikesDocked() > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot set station out_of_service while bikes are docked. Move bikes first."
+            );
+        }
 
-    public DockingStationService(DockingStationRepository dockingStationRepository) {
-        this.dockingStationRepository = dockingStationRepository;
+        s.setStatus(state);
+        return stationRepo.save(s);
     }
 
-    /**
-     * Get station by ID
-     * @param stationId
-     */
-    public DockingStation getStationById(Long stationId) {
-        return dockingStationRepository.findById(stationId).orElse(null);
-    }
+    public DockingStation changePosition(long stationId, double latitude, double longitude) {
+        if (stationRepo.existsByLatitudeAndLongitude(latitude, longitude)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A station already exists at these coordinates.");
+        }
 
-    /**
-     * Get the station where a specific bike is currently located
-     */
-    public DockingStation getStationForBike(Integer bikeId) {
-        // TODO: Implement your logic to find which station this bike is at
-        // This might involve:
-        // 1. Query bike repository to get bike details
-        // 2. Get the bike's current station ID
-        // 3. Return the station marker
-
-        // Example placeholder:
-        // Bike bike = bikeRepository.findById(bikeId).orElseThrow(...);
-        // return stationMarkerRepository.findById(bike.getCurrentStationId()).orElseThrow(...);
-
-        throw new UnsupportedOperationException("Implement bike-to-station lookup logic");
+        DockingStation s = stationRepo.findById(stationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+        if (s.getNumberOfBikesDocked() > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Cannot change position while bikes are docked. Move bikes first."
+            );
+        }
+        s.setLatitude(latitude);
+        s.setLongitude(longitude);
+        return stationRepo.save(s);
     }
 
     /**
      * Get all stations
      */
     public List<DockingStation> getAllStations() {
-        return dockingStationRepository.findAll();
+        return stationRepo.findAll();
     }
 
     /**
@@ -54,7 +62,7 @@ public class DockingStationService {
      */
     @Transactional(readOnly = true)
     public List<DockingStation> cacheDockingStations() {
-        List<DockingStation> stations = dockingStationRepository.findAll();
+        List<DockingStation> stations = stationRepo.findAll();
         stations.forEach(station -> {
             if (station.getDocks() != null) {
                 station.getDocks().size(); // Force load docks
@@ -62,4 +70,29 @@ public class DockingStationService {
         });
         return stations;
     }
+
+    public void deleteStation(long stationId) {
+        DockingStation s = stationRepo.findById(stationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+        boolean hasBike = s.getDocks() != null && s.getDocks().stream().anyMatch(d -> d.getBike() != null);
+        if (hasBike) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot delete station with bikes docked.");
+        }
+        stationRepo.delete(s);
+    }
+
+    public DockingStation create(CreateStationRequestDTO req) {
+        if (stationRepo.existsByLatitudeAndLongitude(req.latitude(), req.longitude())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A station already exists at these coordinates.");
+        }
+        DockingStation station = new DockingStation(
+                req.name(),
+                req.latitude(),
+                req.longitude(),
+                req.address(),
+                req.bikeCapacity()
+        );
+        return stationRepo.save(station);
+    }
+
 }
