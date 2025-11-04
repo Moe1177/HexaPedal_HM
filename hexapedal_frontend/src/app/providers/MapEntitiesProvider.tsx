@@ -3,7 +3,6 @@
 import { createContext, useEffect, useState, useCallback } from "react";
 import { MapEntity } from "@/types/MapEntity";
 import { loadMapEntities } from "../services/utils/loadMapEntities";
-import { useAuth } from "@/hooks/useAuth";
 
 export interface MapEntitiesContextType {
     entities: MapEntity[];
@@ -14,17 +13,16 @@ export interface MapEntitiesContextType {
 export const MapEntitiesContext = createContext<MapEntitiesContextType | undefined>(undefined);
 
 export function MapEntitiesProvider({ children }: { children: React.ReactNode }) {
-    const { authFetch } = useAuth();
     const [entities, setEntities] = useState<MapEntity[]>([]);
 
     const reloadEntities = useCallback(async () => {
         try {
-            const data = await loadMapEntities(authFetch);
+            const data = await loadMapEntities();
             setEntities(data);
         } catch (error) {
             console.error("Failed to fetch map entities:", error);
         }
-    }, [authFetch]);
+    }, []);
 
     useEffect(() => {
         reloadEntities();

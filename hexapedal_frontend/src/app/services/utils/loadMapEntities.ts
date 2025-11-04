@@ -1,7 +1,7 @@
 import { MapEntity } from "@/types/MapEntity";
 
-export async function loadMapEntities(authFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {
-    const res = await authFetch(process.env.NEXT_PUBLIC_API_URL + '/api/map/init-map-entities');
+export async function loadMapEntities() {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/map/init-map-entities');
     if (!res.ok) {
         throw new Error(`Failed to fetch station markers: ${res.statusText}`);
     }
