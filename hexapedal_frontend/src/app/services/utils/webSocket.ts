@@ -12,7 +12,7 @@ export function connectToWebSocket(onMessage: (msg: any) => void) {
         webSocketFactory: () => new SockJS(process.env.NEXT_PUBLIC_API_URL + "/ws"),
         onConnect: () => {
             console.log("Connected to WebSocket");
-            stompClient?.subscribe("/bms/station-updates", (message) => {
+            stompClient?.subscribe("/bms/live-updates", (message) => {
                 const body = JSON.parse(message.body);
                 onMessage(body);
             });

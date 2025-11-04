@@ -22,11 +22,11 @@ public class MapService implements MapEntityListener {
     }
 
     /**
-     * Broadcast updated state to clients subscribed to /bms/station-updates endpoint.
+     * Broadcast updated state to clients subscribed to /bms/live-updates endpoint.
      * @param state is the updated state of a given Publisher entity
      */
     public void update(MapEntity state) {
-        messagingTemplate.convertAndSend("/bms/station-updates", state);
+        messagingTemplate.convertAndSend("/bms/live-updates", state);
         // TODO: Remove Debug log
         System.out.println("Updated the map with this updated state: " + state);
     }
