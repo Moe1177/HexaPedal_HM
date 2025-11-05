@@ -4,6 +4,10 @@ import dynamic from 'next/dynamic';
 
 const MapClient = dynamic(() => import('./MapClient'), { ssr: false });
 
-export default function MapServer() {
-    return <MapClient />;
+interface MapServerProps {
+    onBikeReserved?: (bikeId: number) => void;
+}
+
+export default function MapServer({ onBikeReserved }: MapServerProps = {}) {
+    return <MapClient onBikeReserved={onBikeReserved} />;
 }
