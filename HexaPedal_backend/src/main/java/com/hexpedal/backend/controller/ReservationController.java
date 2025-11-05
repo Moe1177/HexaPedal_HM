@@ -19,6 +19,7 @@ public class ReservationController {
     public ReservationController(ReservationService reservationService) {
         this.reservationService = reservationService;
     }
+
     @PostMapping("/reservations/bikes/{bikeId}")
     public ResponseEntity<Void> reserveBike(
             @PathVariable @Min(1) Integer bikeId,
@@ -27,6 +28,7 @@ public class ReservationController {
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/reservations/{bikeId}/cancel")
     public ResponseEntity<Void> cancelReservation(
             @PathVariable @Min(1) Integer bikeId,
@@ -35,6 +37,7 @@ public class ReservationController {
         reservationService.cancelReservation(email, bikeId);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/trips/{bikeId}/start")
     public ResponseEntity<Void> startTrip(
             @PathVariable @Min(1) Integer bikeId,
@@ -43,6 +46,7 @@ public class ReservationController {
         reservationService.startTrip(bikeId, userId);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/trips/return")
     public ResponseEntity<Void> endTrip(
             @RequestParam @Min(1) Integer bikeId,
@@ -52,6 +56,7 @@ public class ReservationController {
         reservationService.endTrip(bikeId, userId, stationId);
         return ResponseEntity.noContent().build();
     }
+
     @PostMapping("/reservations/expire")
     public ResponseEntity<Void> expireReservations() {
         reservationService.expireReservations();
