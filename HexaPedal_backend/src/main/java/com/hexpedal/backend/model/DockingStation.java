@@ -6,6 +6,8 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "docking_stations")
 @Getter
@@ -36,6 +38,7 @@ public class DockingStation extends MapEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "station_id")
+    @JsonIgnore 
     private List<Dock> docks = new ArrayList<>();
 
     private LocalTime reservationholdTime;
