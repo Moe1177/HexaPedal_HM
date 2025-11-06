@@ -52,6 +52,9 @@ public class User implements UserDetails {
     @Column(name = "verification_expiration")
     private LocalDateTime verificationCodeExpiresAt;
 
+    @Column(name = "stripe_customer_id", unique = true)
+    private String stripeCustomerId;
+
     public User(String fullName, String address, String username, String email, String password) {
         this.fullName = fullName;
         this.address = address;

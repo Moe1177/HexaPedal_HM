@@ -1,5 +1,7 @@
 package com.hexpedal.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -16,6 +18,7 @@ public class Dock {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id", nullable = false)
+    @JsonIgnore
     private DockingStation station;
 
 
@@ -23,6 +26,7 @@ public class Dock {
     public Dock() {
 
     }
+    
 
     public Integer getId() { 
         return id;
@@ -36,6 +40,9 @@ public class Dock {
     }
     public void setBike(Bike bike) { 
         this.bike = bike;
+    }
+    public DockingStation getStation() { 
+        return station;
     }
 
  

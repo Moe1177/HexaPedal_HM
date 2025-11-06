@@ -24,14 +24,18 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
 
-    public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, EmailService emailService) {
+    private final PaymentService paymentService;
+
+
+    public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, EmailService emailService, PaymentService paymentService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.paymentService = paymentService;
     }
 
-    public User signup(RegisterUserDto input){
+    public User signup(RegisterUserDto input) throws Exception {
         if (userRepository.findByEmail(input.getEmail()).isPresent()) {
             throw new RuntimeException("Email already in use");
         }
@@ -49,8 +53,20 @@ public class AuthenticationService {
                 .verificationCode(generateVerificationCode())
                 .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
                 .build();
-        sendVerificationEmail(rider);
-        return userRepository.save(rider);
+
+        User saved = userRepository.save(rider);
+
+        // *** here ***
+        if(input.getStripePaymentMethodId()!= null) {
+            paymentService.saveStripePaymentMethod(
+                    saved.getId(),
+                    input.getStripePaymentMethodId(),
+                    input.getBillingAddress(),
+                    input.getCardholderName()
+            );
+        }
+        sendVerificationEmail(saved);
+        return saved;
     }
 
     public User authenticate(LoginUserDto input){

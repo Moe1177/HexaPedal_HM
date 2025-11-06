@@ -95,4 +95,9 @@ public class DockingStationService {
         return stationRepo.save(station);
     }
 
+    public DockingStation getStation(long stationId) {
+        return stationRepo.findById(stationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+    }
+
 }
