@@ -22,6 +22,22 @@ export function getEmailFromToken(token: string | null): string | null {
 }
 
 /**
+ * Decodes JWT token to extract user ID
+ */
+export function getUserIdFromToken(token: string | null): number | null {
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    // Try common JWT claims for user ID
+    const userId = decoded.userId || decoded.user_id || decoded.id || decoded.sub;
+    return userId ? Number(userId) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Get current user info from backend
  * This assumes there's an endpoint to get current user, or we can decode from token
  * For now, we'll use email from token and fetch user by email

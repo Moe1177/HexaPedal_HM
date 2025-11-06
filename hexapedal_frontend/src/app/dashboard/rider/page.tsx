@@ -5,8 +5,11 @@ import { useState, useEffect } from "react";
 import MapView from "@/app/components/views/MapView";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 import { useAuth } from "@/hooks/useAuth";
-import { getEmailFromToken } from "@/app/services/user/getCurrentUser";
+import { getEmailFromToken, getUserIdFromToken } from "@/app/services/user/getCurrentUser";
 import { cancelReservation } from "@/app/services/user/rider/cancelReservation";
+import { reserveBike } from "@/app/services/user/rider/reserveBike";
+import { unlockBike } from "@/app/services/user/rider/unlockBike";
+import { returnBike } from "@/app/services/user/rider/returnBike";
 
 interface ActiveTrip {
   bikeId: number;
@@ -34,7 +37,9 @@ export default function RiderDashboard() {
   useEffect(() => {
     if (token) {
       const userEmail = getEmailFromToken(token);
+      const id = getUserIdFromToken(token);
       setEmail(userEmail);
+      setUserId(id);
     }
   }, [token]);
 
@@ -68,7 +73,7 @@ export default function RiderDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      await cancelReservation(activeReservation.bikeId, email);
+      await cancelReservation(activeReservation.bikeId, email, token);
       setActiveReservation(null);
       alert("Reservation cancelled");
     } catch (err) {
@@ -87,7 +92,7 @@ export default function RiderDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      await unlockBike(bikeId, userId);
+      await unlockBike(bikeId, userId, token);
       setActiveTrip({ bikeId, startedAt: new Date() });
       setActiveReservation(null);
       alert("Bike unlocked! Your trip has started.");
@@ -107,7 +112,7 @@ export default function RiderDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      await returnBike(activeTrip.bikeId, userId, selectedStationId);
+      await returnBike(activeTrip.bikeId, userId, selectedStationId, token);
       setActiveTrip(null);
       setShowReturnModal(false);
       alert("Bike returned successfully!");
