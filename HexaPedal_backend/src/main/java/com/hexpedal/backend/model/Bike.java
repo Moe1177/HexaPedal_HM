@@ -24,16 +24,19 @@ public class Bike {
 
     private LocalDate reservationExpDate;
     private LocalTime reservationExpTime;
+    private LocalDateTime tripStartTime;
+
+    private String tripStartStationName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @JsonIgnore  // hides the entire User object from JSON (prevents Hibernate proxy issues)
+    @JsonIgnore  
     private User currentUser;
 
     @Transient
     private static final int RESERVATION_EXPIRY_MINUTES = 10;
 
-    // Constructors
+
     public Bike() {
         this.bikeStatus = BikeStatus.available;
     }
@@ -43,10 +46,25 @@ public class Bike {
         this.bikeStatus = BikeStatus.available;
     }
 
-    // Getters and setters
+
     public int getId() {
         return id;
     }
+    public LocalDateTime getTripStartTime() { 
+        return tripStartTime; 
+    }
+    public void setTripStartTime(LocalDateTime tripStartTime) { 
+        this.tripStartTime = tripStartTime; 
+    }
+ 
+
+    public String getTripStartStationName() { 
+        return tripStartStationName; 
+    }
+    public void setTripStartStationName(String tripStartStationName) { 
+        this.tripStartStationName = tripStartStationName; 
+    }
+
 
     public void setId(int id) {
         this.id = id;
@@ -99,7 +117,7 @@ public class Bike {
         return currentUser.getId();
     }
 
-    // Reservation logic
+  
     public void reserve(User user) {
         if (this.bikeStatus != BikeStatus.available) {
             throw new IllegalStateException("Cannot reserve bike because bike is " + this.bikeStatus);

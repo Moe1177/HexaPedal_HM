@@ -8,6 +8,12 @@ import com.hexpedal.backend.repository.DockingStationRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.hexpedal.backend.service.DockingStationService;
+import com.hexpedal.backend.dto.DockDTO;
+import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
+
+
+
 
 @RestController
 @RequestMapping("/api/stations")
@@ -61,5 +67,29 @@ public class DockingStationController {
     public ResponseEntity<?> list() {
         return ResponseEntity.ok(stationRepo.findAll());
     }
+
+    @GetMapping("/{stationId}/bikes")
+public ResponseEntity<?> getBikesForStation(@PathVariable long stationId) {
+
+    var station = dockingStationService.getStation(stationId);
+    var docks = station.getDocks();
+    var bikes = docks.stream()
+            .filter(d -> d.getBike() != null)
+            .map(d -> d.getBike())
+            .toList();
+
+    return ResponseEntity.ok(bikes);
+}
+@GetMapping("/{id}/docks/available")
+public List<DockDTO> getAvailableDocks(@PathVariable Long id) {
+    var station = stationRepo.findById(id)
+            .orElseThrow(() -> new EntityNotFoundException("Station not found"));
+
+            return station.getDocks().stream()
+            .filter(dock -> dock.getBike() == null)
+            .map(dock -> new DockDTO(dock.getId()))
+            .toList();
+}
+
 
 }

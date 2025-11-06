@@ -3,9 +3,16 @@ package com.hexpedal.backend.service;
 import java.time.LocalDateTime;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
+import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
+import java.util.Objects;
+
+import java.time.Duration;
 import org.springframework.stereotype.Service;
+
+
 import com.hexpedal.backend.model.BikeStatus;
+import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -16,12 +23,15 @@ public class ReservationService {
     private final BikeRepository bikeRepo;
     private final DockRepository dockRepo;
     private final DockingStationRepository dockstationRepo;
+    private final RidesRepository ridesRepo;
+    
 
-    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo) {
+    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo) {
         this.userRepo = userRepo;
         this.bikeRepo = bikeRepo;
         this.dockRepo = dockRepo;
         this.dockstationRepo = dockstationRepo;
+        this.ridesRepo = ridesRepo;
     }
 
     public void reserveBike(String email, Integer bikeId) {
@@ -53,51 +63,105 @@ public class ReservationService {
     }
 
     public void cancelReservation(String email, Integer bikeId) {
-        var user = userRepo.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved).orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
-        if (bike.getCurrentUser().getId() != user.getId()) {
+        var user = userRepo.findByEmail(email)
+            .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+    
+        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved)
+            .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
+    
+        if (!Objects.equals(bike.getCurrentUser().getId(), user.getId())) {
             throw new IllegalStateException("Bike is reserved by another user.");
         }
+    
         bike.setBikeStatus(BikeStatus.available);
         bike.setCurrentUser(null);
         bike.setReservationExpDate(null);
         bike.setReservationExpTime(null);
+    
         bikeRepo.save(bike);
     }
-    public void startTrip(Integer bikeId,Long userId){
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved).orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
+    
+
+    public void startTrip(Integer bikeId, String email){
+        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved)
+                .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
        
-        if (bike.getCurrentUser().getId() != userId) {
-            throw new IllegalStateException("Bike is reserved by another user.");
-        }
-
-
-        var dock = dockRepo.findByBike_Id(bikeId).orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+        if (!Objects.equals(bike.getCurrentUser().getEmail(), email)) {
+                    throw new IllegalStateException("Bike is reserved by another user.");
+                }
+    
+        var dock = dockRepo.findByBike_Id(bikeId)
+                .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+    
+        Long stationId = dock.getStation().getId(); 
+        var station = dockstationRepo.findById(stationId)
+                        .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
+            
+        String startStationName = station.getName();
+    
         dock.setBike(null);
         dockRepo.save(dock);
-
+    
         bike.setBikeStatus(BikeStatus.on_trip);
         bike.setReservationExpDate(null);
         bike.setReservationExpTime(null);
-        bikeRepo.save(bike);
 
+        bike.setTripStartTime(LocalDateTime.now());
+        bike.setTripStartStationName(startStationName);
+    
+        bikeRepo.save(bike);
     }
-    public void endTrip(Integer bikeId,Long userId, Long stationId){
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip).orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
-        var stationRepo= dockstationRepo.findById(stationId).orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
+    public void endTrip(Integer bikeId, Long userId, Long stationId){
+        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
+                .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
+        var station = dockstationRepo.findById(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
         if (bike.getCurrentUser().getId() != userId) {
             throw new IllegalStateException("Bike is on trip by another user.");
         }
-        if (stationRepo.getNumberOfBikesDocked() >= stationRepo.getBikeCapacity()) {
+        if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
             throw new IllegalStateException("No empty dock available at this station.");
         }
-
-
-        var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId).orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
+    
+        var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
+                .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
         emptyDock.setBike(bike);
         dockRepo.save(emptyDock);
         bike.setBikeStatus(BikeStatus.available);
         bike.setCurrentUser(null);
+        bikeRepo.save(bike);
+    
+    
+        LocalDateTime startTime = bike.getTripStartTime();
+        LocalDateTime endTime = LocalDateTime.now();
+    
+        float durationMinutes = 0f;
+        if (startTime != null) {
+            long seconds = Duration.between(startTime, endTime).getSeconds();
+            durationMinutes = seconds / 60.0f;
+        }
+    
+        String startLocation = bike.getTripStartStationName() != null
+                ? bike.getTripStartStationName()
+                : "Unknown";
+    
+        String endLocation = station.getName(); 
+    
+        float distanceKm = 0f; 
+    
+        Rides ride = new Rides(
+                userId.intValue(),   
+                startLocation,
+                endLocation,
+                durationMinutes,
+                distanceKm
+        );
+      
+        ridesRepo.save(ride);
+    
+     
+        bike.setTripStartTime(null);
+        bike.setTripStartStationName(null);
         bikeRepo.save(bike);
     }
     public void expireReservations(){
@@ -117,5 +181,67 @@ public class ReservationService {
             }
         }
     }
+    
+
+
+        public void startGuestTrip(Integer bikeId) {
+            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not available for a guest trip."));
+    
+            var dock = dockRepo.findByBike_Id(bikeId)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+    
+            Long stationId = dock.getStation().getId();
+            var station = dockstationRepo.findById(stationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
+    
+            String startStationName = station.getName();
+  
+            dock.setBike(null);
+            dockRepo.save(dock);
+    
+            bike.setBikeStatus(BikeStatus.on_trip);
+            bike.setCurrentUser(null);
+            bike.setReservationExpDate(null);
+            bike.setReservationExpTime(null);
+            bike.setTripStartTime(LocalDateTime.now());
+            bike.setTripStartStationName(startStationName);
+    
+            bikeRepo.save(bike);
+        }
+    
+        public void endGuestTrip(Integer bikeId, Long stationId) {
+            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
+    
+
+            if (bike.getCurrentUser() != null) {
+                throw new IllegalStateException("This trip belongs to a registered user.");
+            }
+    
+            var station = dockstationRepo.findById(stationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
+    
+            if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
+                throw new IllegalStateException("No empty dock available at this station.");
+            }
+    
+            var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
+                    .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
+    
+            emptyDock.setBike(bike);
+            dockRepo.save(emptyDock);
+    
+            bike.setBikeStatus(BikeStatus.available);
+            bike.setCurrentUser(null);
+            bike.setReservationExpDate(null);
+            bike.setReservationExpTime(null);
+    
+            bikeRepo.save(bike);
+        }
+    
+    
+
+
 
 }
