@@ -1,5 +1,6 @@
 package com.hexpedal.backend.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,8 @@ import lombok.Setter;
 @Setter
 public class LoginUserDto
 {
+    @NotNull(message = "Email is required")
     private String email;
+    @NotNull(message = "Password is required")
     private String password;
 }
