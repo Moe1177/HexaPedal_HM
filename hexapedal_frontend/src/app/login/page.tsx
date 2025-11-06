@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { login } from "@/app/services/authentication/authService";
 import { useAuth } from "@/hooks/useAuth";
+import { getRoleFromToken } from "@/app/services/user/getCurrentUser";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,8 +36,18 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(email, password, setToken);
-      router.push("/dashboard/rider");
+      const response = await login(email, password, setToken);
+      // Get the token from the response or localStorage
+      const token = response.token || localStorage.getItem("auth_token");
+      
+      const roles = getRoleFromToken(token);
+      const role = roles?.[0]?.authority; // safely get the authority value
+      
+      if (role === "ROLE_OPERATOR") {
+        router.push("/dashboard/operator");
+      } else {
+        router.push("/dashboard/rider");
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setErrorMessage(message);
