@@ -1,4 +1,3 @@
-// src/main/java/com/hexpedal/backend/model/Operator.java
 package com.hexpedal.backend.model;
 
 import jakarta.persistence.Entity;
@@ -10,7 +9,6 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
 import java.util.Collection;
 import java.util.List;
 
