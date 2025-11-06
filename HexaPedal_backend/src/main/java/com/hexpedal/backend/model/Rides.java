@@ -28,7 +28,6 @@ public class Rides {
     @JsonIgnore
     private User user;
 
-
     @Column(name = "start_location", nullable = false)
     private String startLocation;
 
@@ -50,4 +49,32 @@ public class Rides {
     @Column(name = "cost", nullable = false)
     private double cost;
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bike_id", nullable = false)
+    private Bike bike;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ride_status", nullable = false)
+    private RideStatus rideStatus;
+
+    private Double baseFee;
+    private Double timeFee;
+    private Double lateFee;
+    private Double totalCost;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id", nullable = false)
+    private PricingPlan pricingPlan;
+
+    @Column(length = 1000)
+    private String costBreakdown;
+
+    public void calculateDuration(){
+        if(startTimestamp != null && endTimestamp != null){
+            this.duration = (endTimestamp.getEpochSecond() - startTimestamp.getEpochSecond()) / 60.0; // duration in minutes
+        } else {
+            this.duration = 0;
+        }
+    }
 }
