@@ -42,7 +42,7 @@ public class Rides {
     private Instant endTimestamp;
 
     @Column(name = "duration", nullable = false)
-    private double duration; 
+    private double duration;
 
     @Column(name = "distance", nullable = false)
     private double distance; 
