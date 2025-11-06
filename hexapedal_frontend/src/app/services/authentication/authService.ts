@@ -1,3 +1,5 @@
+import { API_BASE_URL } from "../utils/constants";
+
 export type LoginResponse = {
     token: string;
     expiresIn: number;
@@ -8,17 +10,35 @@ export async function login(
     password: string,
     setToken: (token: string) => void
 ): Promise<LoginResponse> {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
     });
 
     if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message || "Login failed");
+        let errorMessage = "Login failed";
+        try {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const data = await res.json();
+                errorMessage = data.message || data || "Login failed";
+            } else {
+                const text = await res.text();
+                errorMessage = text || "Login failed";
+            }
+        } catch (e) {
+            errorMessage = res.statusText || "Login failed";
+        }
+        throw new Error(errorMessage);
     }
-    const data = await res.json();
+    
+    const data: LoginResponse = await res.json();
+    
+    if (!data.token) {
+        throw new Error("Invalid response: token not found");
+    }
+    
     setToken(data.token);
     return data;
 }
