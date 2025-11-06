@@ -1,8 +1,12 @@
 import "leaflet/dist/leaflet.css";
 import MapServer from "../ui/map/MapServer";
 
-export default function MapView() {
+interface MapViewProps {
+    onBikeReserved?: (bikeId: number) => void;
+}
+
+export default function MapView({ onBikeReserved }: MapViewProps = {}) {
     return (
-        <MapServer />
+        <MapServer onBikeReserved={onBikeReserved} />
     );
 }

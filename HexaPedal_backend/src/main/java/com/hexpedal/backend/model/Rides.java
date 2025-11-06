@@ -42,10 +42,10 @@ public class Rides {
     private Instant endTimestamp;
 
     @Column(name = "duration", nullable = false)
-    private double duration; // in minutes
+    private double duration;
 
     @Column(name = "distance", nullable = false)
-    private double distance; // in kilometers
+    private double distance; 
 
     @Column(name = "cost", nullable = false)
     private double cost;
