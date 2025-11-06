@@ -41,29 +41,16 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/**", "/api/map/**", "/ws/**").permitAll()
-
-                        .requestMatchers("/api/reservations/**", "/api/trips/**")
-                        .hasAnyRole("RIDER", "OPERATOR")
-
-
-                        .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*")
-                        .hasAnyRole("RIDER", "OPERATOR")
-
-                        // optional: public reads
-                        .requestMatchers(HttpMethod.GET, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
-                        .permitAll()
-
-
-                        .requestMatchers(HttpMethod.POST, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
-                        .hasRole("OPERATOR")
-                        .requestMatchers(HttpMethod.PUT, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
-                        .hasRole("OPERATOR")
-                        .requestMatchers(HttpMethod.PATCH, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
-                        .hasRole("OPERATOR")
-                        .requestMatchers(HttpMethod.DELETE, "/api/stations/**", "/api/bikes/**", "/api/docks/**")
-                        .hasRole("OPERATOR")
-
-
+                        .requestMatchers("/api/reservations/**", "/api/trips/**").hasAnyRole("RIDER", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*").hasAnyRole("RIDER", "OPERATOR")
+                        .requestMatchers("/api/trucks/**").hasRole("OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/trips/guest/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stations/**", "/api/bikes/**", "/api/docks/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/trips/guest/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+                        .requestMatchers(HttpMethod.PUT, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider)

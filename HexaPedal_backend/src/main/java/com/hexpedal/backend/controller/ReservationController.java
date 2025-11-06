@@ -64,6 +64,22 @@ public class ReservationController {
         return ResponseEntity.noContent().build();
     }
 
+     @PostMapping("/trips/guest/{bikeId}/start")
+     public ResponseEntity<Void> startGuestTrip(@PathVariable Integer bikeId) {
+         reservationService.startGuestTrip(bikeId);
+         return ResponseEntity.noContent().build();
+     }
+ 
+
+     @PostMapping("/trips/guest/return")
+     public ResponseEntity<Void> endGuestTrip(
+             @RequestParam @Min(1) Integer bikeId,
+             @RequestParam @Min(1) Long stationId
+     ) {
+         reservationService.endGuestTrip(bikeId, stationId);
+         return ResponseEntity.noContent().build();
+     }
+
     @PostMapping("/reservations/expire")
     public ResponseEntity<Void> expireReservations() {
         reservationService.expireReservations();

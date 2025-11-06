@@ -223,6 +223,64 @@ public class ReservationService {
                 expiresAt
         );
     }
+
+
+        public void startGuestTrip(Integer bikeId) {
+            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not available for a guest trip."));
+    
+            var dock = dockRepo.findByBike_Id(bikeId)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+    
+            Long stationId = dock.getStation().getId();
+            var station = dockstationRepo.findById(stationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
+    
+            String startStationName = station.getName();
+  
+            dock.setBike(null);
+            dockRepo.save(dock);
+    
+            bike.setBikeStatus(BikeStatus.on_trip);
+            bike.setCurrentUser(null);
+            bike.setReservationExpDate(null);
+            bike.setReservationExpTime(null);
+            bike.setTripStartTime(LocalDateTime.now());
+            bike.setTripStartStationName(startStationName);
+    
+            bikeRepo.save(bike);
+        }
+    
+        public void endGuestTrip(Integer bikeId, Long stationId) {
+            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
+    
+
+            if (bike.getCurrentUser() != null) {
+                throw new IllegalStateException("This trip belongs to a registered user.");
+            }
+    
+            var station = dockstationRepo.findById(stationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
+    
+            if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
+                throw new IllegalStateException("No empty dock available at this station.");
+            }
+    
+            var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
+                    .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
+    
+            emptyDock.setBike(bike);
+            dockRepo.save(emptyDock);
+    
+            bike.setBikeStatus(BikeStatus.available);
+            bike.setCurrentUser(null);
+            bike.setReservationExpDate(null);
+            bike.setReservationExpTime(null);
+    
+            bikeRepo.save(bike);
+        }
+    
     
 
 
