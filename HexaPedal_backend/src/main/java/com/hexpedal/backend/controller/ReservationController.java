@@ -1,6 +1,6 @@
 package com.hexpedal.backend.controller;
 
-import com.hexpedal.backend.dto.UserReservationStatusDTO;
+
 import com.hexpedal.backend.service.ReservationService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.constraints.Min;
@@ -30,12 +30,7 @@ public class ReservationController {
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
     }
-    @GetMapping("/reservations/bikes/status")
-    public ResponseEntity<UserReservationStatusDTO> getReservationStatus() {
-    String email = SecurityContextHolder.getContext().getAuthentication().getName();
-    var dto = reservationService.getCurrentReservationStatus(email);
-    return ResponseEntity.ok(dto);
-}
+  
     
     
 
