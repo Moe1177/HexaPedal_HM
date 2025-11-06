@@ -1,80 +1,55 @@
 package com.hexpedal.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.time.Instant;
 
 @Entity
-@Table(name = "rides")  
+@Table(name = "rides")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Rides {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ride_id")                          
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @Column(name = "ride_id")
     private Integer rideId;
-
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
     @Column(name = "start_location", nullable = false)
     private String startLocation;
-
     @Column(name = "end_location", nullable = false)
     private String endLocation;
-
-
+    @Column(name = "start_timestamp", nullable = false)
+    private Instant startTimestamp;
+    @Column(name = "end_timestamp", nullable = false)
+    private Instant endTimestamp;
     @Column(name = "duration", nullable = false)
-    private Float duration;
-
-
+    private double duration;
     @Column(name = "distance", nullable = false)
-    private Float distance;
+    private double distance;
+    @Column(name = "cost", nullable = false)
+    private double cost;
 
-    public Rides(Integer userId, String startLocation, String endLocation, Float duration, Float distance) {
-        this.userId = userId;
+  
+    public Rides(User user,String startLocation,String endLocation,Instant startTimestamp,Instant endTimestamp,double duration,double distance,double cost) {
+        this.user = user;
         this.startLocation = startLocation;
         this.endLocation = endLocation;
+        this.startTimestamp = startTimestamp;
+        this.endTimestamp = endTimestamp;
         this.duration = duration;
         this.distance = distance;
-    }
-
-
-
-    public Integer getId() { 
-        return userId; 
-    }
-    public void setId(Integer id) { 
-        this.userId = id; 
-    }
-
-    public Integer getUserId() { 
-        return userId;
-     }
-    public void setUserId(Integer userId) { 
-        this.userId = userId; 
-    }
-
-    public String getStartLocation() { 
-        return startLocation;
-     }
-    public void setStartLocation(String startLocation) { 
-        this.startLocation = startLocation; 
-    }
-
-    public String getEndLocation() { 
-        return endLocation; 
-    }
-    public void setEndLocation(String endLocation) { 
-        this.endLocation = endLocation; 
-    }
-
-    public Float getDuration() { return duration; }
-    public void setDuration(Float duration) {
-         this.duration = duration; 
-    }
-
-    public Float getDistance() { 
-        return distance; 
-    }
-    public void setDistance(Float distance) { 
-        this.distance = distance; 
+        this.cost = cost;
     }
 }
+
