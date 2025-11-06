@@ -37,7 +37,7 @@ public class DockBikeController {
 
         DockingStation station = stationRepo.findById(stationId).orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
 
-        if (station.getStationState() == DockingStationStates.out_of_service) {
+        if (station.getStatus() == DockingStationStates.out_of_service) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot dock: station is out of service.");
         }
 
@@ -63,6 +63,7 @@ public class DockBikeController {
 
     return ResponseEntity.noContent().build();
     }
+    
 
 
 }

@@ -1,8 +1,5 @@
 package com.hexpedal.backend.repository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.query.Param;
-
 import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.Dock;
 import com.hexpedal.backend.model.DockingStation;

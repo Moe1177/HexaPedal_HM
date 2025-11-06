@@ -1,8 +1,7 @@
 package com.hexpedal.backend.repository;
+
 import org.springframework.stereotype.Repository;
-
 import org.springframework.data.repository.CrudRepository;
-
 import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.User;
