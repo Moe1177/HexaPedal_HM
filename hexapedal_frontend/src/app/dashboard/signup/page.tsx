@@ -3,10 +3,35 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { API_BASE_URL } from "@/app/services/utils/constants";
 
-export default function SignUpPage() {
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+
+type RegisterPayload = {
+  fullName: string;
+  address: string;
+  username: string;
+  email: string;
+  password: string;
+  stripePaymentMethodId?: string;
+  cardholderName?: string;
+  billingAddress?: {
+    line1: string;
+    line2: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+};
+
+function SignUpFormInner() {
   const router = useRouter();
+  const stripe = useStripe();
+  const elements = useElements();
   const [fullName, setFullName] = useState("");
   const [address, setAddress] = useState("");
   const [username, setUsername] = useState("");
@@ -20,6 +45,16 @@ export default function SignUpPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [emailTaken, setEmailTaken] = useState<boolean | null>(null);
   const [usernameTaken, setUsernameTaken] = useState<boolean | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Payment
+  const [cardholderName, setCardholderName] = useState("");
+  const [line1, setLine1] = useState("");
+  const [line2, setLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("CA");
 
   async function checkEmailAvailability(value: string) {
     setEmailTaken(null);
@@ -54,6 +89,17 @@ export default function SignUpPage() {
     if (!password) return "Password is required";
     if (password.length < 6) return "Password must be at least 6 characters";
     if (password !== confirmPassword) return "Passwords do not match";
+    
+    // Payment validation
+    if (!cardholderName.trim()) return "Cardholder name is required";
+    if (!line1.trim()) return "Billing address is required";
+    if (!city.trim()) return "City is required";
+    if (!state.trim()) return "State/Province is required";
+    if (!postalCode.trim()) return "Postal code is required";
+    
+    // Terms and conditions validation
+    if (!agreedToTerms) return "You must agree to the Terms of Service and Privacy Policy";
+    
     return null;
   }
 
@@ -61,57 +107,92 @@ export default function SignUpPage() {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("handleSubmit called");
-    
-    if (isSubmitting) {
-      console.log("Already submitting, returning");
+    if (!stripe || !elements) {
+      setErrorMessage("Stripe is not loaded. Please refresh the page.");
       return;
     }
 
-    console.log("Starting validation...");
+    if (isSubmitting) {
+      return;
+    }
+
     setErrorMessage(null);
     setSuccessMessage(null);
 
     const validationError = validate();
     if (validationError) {
-      console.log("Validation error:", validationError);
       setErrorMessage(validationError);
       return;
     }
 
-    console.log("Validation passed, checking email/username availability...");
-    
     if (emailTaken === true) {
-      console.log("Email already taken");
       setErrorMessage("Email already in use");
       return;
     }
     if (usernameTaken === true) {
-      console.log("Username already taken");
       setErrorMessage("Username already in use");
       return;
     }
     
-    console.log("All checks passed, starting submission...");
     setIsSubmitting(true);
     try {
-      const payload = {
+      // Step 1: Create Stripe Payment Method
+      const card = elements.getElement(CardElement);
+      if (!card) {
+        setErrorMessage("Card element not found");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const cleanPostalCode = postalCode.trim().toUpperCase();
+
+      const { error, paymentMethod } = await stripe.createPaymentMethod({
+        type: "card",
+        card,
+        billing_details: {
+          name: cardholderName,
+          email,
+          address: {
+            line1,
+            line2: line2 || undefined,
+            city,
+            state,
+            postal_code: cleanPostalCode,
+            country,
+          },
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message || "Error creating payment method");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 2: Send user and payment info to backend
+      const payload: RegisterPayload = {
         fullName,
         address,
         username,
         email,
         password,
+        stripePaymentMethodId: paymentMethod.id,
+        cardholderName,
+        billingAddress: {
+          line1,
+          line2,
+          city,
+          state,
+          postalCode: cleanPostalCode,
+          country,
+        },
       };
-      
-      console.log("Submitting signup request...", payload);
       
       const res = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      console.log("Response status:", res.status, res.statusText);
 
       if (!res.ok) {
         let message = "Signup failed";
@@ -127,20 +208,18 @@ export default function SignUpPage() {
         } catch (e) {
           message = res.statusText || "Signup failed";
         }
-        console.error("Signup error:", message);
         throw new Error(message);
       }
 
       const responseData = await res.json();
-      console.log("Signup successful:", responseData);
       
-      setSuccessMessage("Registration successful! Your account has been created. Please log in to continue.");
+      setSuccessMessage("Registration successful. Please check your email for the verification code.");
+      const params = new URLSearchParams({ email });
       setTimeout(() => {
         setIsSubmitting(false);
-        router.push("/login");
-      }, 2000);
+        router.push(`/verify?${params.toString()}`);
+      }, 800);
     } catch (err) {
-      console.error("Signup catch error:", err);
       const message = err instanceof Error ? err.message : "Signup failed";
       setErrorMessage(message);
       setIsSubmitting(false);
@@ -318,6 +397,153 @@ export default function SignUpPage() {
               </div>
             </div>
 
+            {/* Payment Information Section */}
+            <div className="space-y-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-6">
+              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Payment Information</h2>
+              
+              <div>
+                <label htmlFor="cardholderName" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  Cardholder Name
+                </label>
+                <input
+                  type="text"
+                  id="cardholderName"
+                  name="cardholderName"
+                  value={cardholderName}
+                  onChange={(e) => setCardholderName(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Name on card"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">Card Details</label>
+                <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-5 py-3.5">
+                  <CardElement
+                    options={{
+                      hidePostalCode: true,
+                      style: {
+                        base: {
+                          fontSize: "16px",
+                          color: "#ffffff",
+                          "::placeholder": { color: "#9ca3af" },
+                        },
+                        invalid: { color: "#ef4444" },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="line1" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  Billing Address Line 1
+                </label>
+                <input
+                  type="text"
+                  id="line1"
+                  name="line1"
+                  value={line1}
+                  onChange={(e) => setLine1(e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="123 Main St"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="line2" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  Billing Address Line 2 (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="line2"
+                  name="line2"
+                  value={line2}
+                  onChange={(e) => setLine2(e.target.value)}
+                  disabled={isSubmitting}
+                  className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Apt 4B"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="City"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                    State/Province
+                  </label>
+                  <input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="QC"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="postalCode" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                    Postal Code
+                  </label>
+                  <input
+                    type="text"
+                    id="postalCode"
+                    name="postalCode"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="H2X 1Y2"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                    Country
+                  </label>
+                  <select
+                    id="country"
+                    name="country"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="CA">Canada</option>
+                    <option value="US">United States</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {errorMessage && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
                 <p className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -337,6 +563,8 @@ export default function SignUpPage() {
             <label className="flex items-start gap-2">
               <input
                 type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
                 required
                 disabled={isSubmitting}
                 className="mt-1 w-4 h-4 text-indigo-600 border-neutral-300 rounded focus:ring-indigo-500 disabled:opacity-50"
@@ -355,7 +583,7 @@ export default function SignUpPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !stripe}
               className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-xl hover:from-indigo-700 hover:to-sky-700 transition-all font-semibold shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:from-indigo-600 disabled:hover:to-sky-600"
             >
               {isSubmitting ? "Creating account…" : "Create account"}
@@ -365,7 +593,7 @@ export default function SignUpPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
               Already have an account?{" "}
-              <Link href="/login" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+              <Link href="/dashboard/login" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
                 Sign in
               </Link>
             </p>
@@ -376,3 +604,26 @@ export default function SignUpPage() {
   );
 }
 
+export default function SignUpPage() {
+  if (!stripePromise) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-10 border border-neutral-100 dark:border-neutral-800">
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <p className="text-sm text-red-600 dark:text-red-400">
+                <strong>Stripe configuration error.</strong> Check your NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Elements stripe={stripePromise}>
+      <SignUpFormInner />
+    </Elements>
+  );
+}

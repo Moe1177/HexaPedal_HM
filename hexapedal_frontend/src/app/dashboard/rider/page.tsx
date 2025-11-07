@@ -12,11 +12,14 @@ import { cancelReservation } from "@/app/services/user/rider/cancelReservation";
 import { reserveBike } from "@/app/services/user/rider/reserveBike";
 import { unlockBike } from "@/app/services/user/rider/unlockBike";
 import { returnBike } from "@/app/services/user/rider/returnBike";
+import ReturnBikeModal from "@/app/components/ui/ReturnBikeModal";
+import { getUserIdFromBike } from "@/app/services/user/getUserIdFromBike";
 
 type ViewType = "map" | "rides" | "billing" | "profile";
 
 interface ActiveTrip {
   bikeId: number;
+  userId: number;
   startedAt: Date;
 }
 
@@ -89,16 +92,23 @@ export default function RiderDashboard() {
   };
 
   const handleUnlockBike = async (bikeId: number) => {
-    if (!userId) {
-      setError("User ID not available. Please refresh the page.");
+    if (!token) {
+      setError("Please log in to unlock a bike");
       return;
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      await unlockBike(bikeId, userId, token);
-      setActiveTrip({ bikeId, startedAt: new Date() });
+      await unlockBike(bikeId, token);
+      
+      // Get the user ID from the bike after unlocking
+      const userIdFromBike = await getUserIdFromBike(bikeId, token);
+      if (!userIdFromBike) {
+        throw new Error("Unable to get user ID from bike. Please try again.");
+      }
+      
+      setActiveTrip({ bikeId, userId: userIdFromBike, startedAt: new Date() });
       setActiveReservation(null);
       alert("Bike unlocked! Your trip has started.");
     } catch (err) {
@@ -108,18 +118,19 @@ export default function RiderDashboard() {
     }
   };
 
-  const handleReturnBike = async () => {
-    if (!activeTrip || !userId || !selectedStationId) {
-      setError("Please select a station to return the bike");
+  const handleReturnBike = async (stationId: number) => {
+    if (!activeTrip || !activeTrip.userId) {
+      setError("User ID not available. Please refresh the page.");
       return;
     }
 
     setIsLoading(true);
     setError(null);
     try {
-      await returnBike(activeTrip.bikeId, userId, selectedStationId, token);
+      await returnBike(activeTrip.bikeId, activeTrip.userId, stationId, token);
       setActiveTrip(null);
       setShowReturnModal(false);
+      setSelectedStationId(null);
       alert("Bike returned successfully!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to return bike");
@@ -249,7 +260,7 @@ export default function RiderDashboard() {
               <div className="space-y-2">
                 <button
                   onClick={() => handleUnlockBike(activeReservation.bikeId)}
-                  disabled={isLoading || !userId}
+                  disabled={isLoading || !token}
                   className="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Unlock Bike
@@ -310,73 +321,6 @@ export default function RiderDashboard() {
                 </button>
               </div>
 
-              <div className="absolute top-4 right-4 z-[1000]">
-                <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl rounded-2xl shadow-xl p-5 border border-neutral-200/60 dark:border-neutral-800 max-w-xs">
-                  <h4 className="font-semibold mb-3 text-neutral-900 dark:text-neutral-100">Nearby Stations</h4>
-                  <div className="space-y-3">
-                    <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm text-neutral-900 dark:text-neutral-100">Main Street</span>
-                        <span className="text-xs text-sky-600 dark:text-sky-400 font-semibold">0.3 mi</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">12 bikes available</span>
-                      </div>
-                      {showReturnModal && (
-                        <button
-                          onClick={() => {
-                            setSelectedStationId(1); 
-                            handleReturnBike();
-                          }}
-                          className="mt-2 w-full px-2 py-1 bg-sky-600 text-white rounded text-xs hover:bg-sky-700"
-                        >
-                          Return Here
-                        </button>
-                      )}
-                    </div>
-                    <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm text-neutral-900 dark:text-neutral-100">Park Ave</span>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">0.8 mi</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">5 bikes available</span>
-                      </div>
-                      {showReturnModal && (
-                        <button
-                          onClick={() => {
-                            setSelectedStationId(2); 
-                            handleReturnBike();
-                          }}
-                          className="mt-2 w-full px-2 py-1 bg-sky-600 text-white rounded text-xs hover:bg-sky-700"
-                        >
-                          Return Here
-                        </button>
-                      )}
-                    </div>
-                    <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm text-neutral-900 dark:text-neutral-100">Central Park</span>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-semibold">1.2 mi</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">8 bikes available</span>
-                      </div>
-                      {showReturnModal && (
-                        <button
-                          onClick={() => {
-                            setSelectedStationId(3);
-                            handleReturnBike();
-                          }}
-                          className="mt-2 w-full px-2 py-1 bg-sky-600 text-white rounded text-xs hover:bg-sky-700"
-                        >
-                          Return Here
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
           {currentView === "rides" && <MyRidesView />}
@@ -420,6 +364,19 @@ export default function RiderDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {showReturnModal && activeTrip && (
+        <ReturnBikeModal
+          isOpen={showReturnModal}
+          onClose={() => {
+            setShowReturnModal(false);
+            setSelectedStationId(null);
+          }}
+          onReturn={handleReturnBike}
+          bikeId={activeTrip.bikeId}
+          isLoading={isLoading}
+        />
       )}
     </div>
   );

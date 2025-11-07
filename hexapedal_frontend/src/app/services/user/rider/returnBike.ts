@@ -23,8 +23,20 @@ export async function returnBike(
   );
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => "Failed to return bike");
-    throw new Error(errorText || "Failed to return bike");
+    let errorMessage = "Failed to return bike";
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        errorMessage = data.message || data || errorMessage;
+      } else {
+        const text = await response.text();
+        errorMessage = text || errorMessage;
+      }
+    } catch (e) {
+      errorMessage = response.statusText || errorMessage;
+    }
+    throw new Error(errorMessage);
   }
 }
 
