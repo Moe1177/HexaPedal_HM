@@ -54,11 +54,7 @@ public class SubscriptionController {
         }
     }
 
-    /**
-     * Subscribe to a plan - Rider only
-     * NOTE: This is for advanced/custom payment form usage
-     * For simple checkout flow, use /create-checkout-session instead
-     */
+ 
     @PostMapping("/subscribe")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> subscribe(
