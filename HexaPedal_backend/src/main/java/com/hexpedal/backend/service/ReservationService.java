@@ -10,6 +10,8 @@ import java.time.ZoneId;
 import java.time.Instant;
 
 import java.time.Duration;
+
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
@@ -20,7 +22,6 @@ import jakarta.persistence.EntityNotFoundException;
 
 @Service
 @AllArgsConstructor
-@RequiredArgsConstructor
 public class ReservationService {
     private static final int HOLD_MINUTES = 10; 
     private final UserRepository userRepo;

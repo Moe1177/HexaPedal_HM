@@ -23,7 +23,6 @@ public class PaymentService {
     private final SubscriptionPlanRepository subscriptionPlanRepo;
     private final UserSubscriptionRepository userSubscriptionRepo;
 
-    // Ensure your User has a column: private String stripeCustomerId;
     private String ensureStripeCustomer(User user) throws StripeException {
         if (user.getStripeCustomerId() != null) return user.getStripeCustomerId();
         Map<String, Object> params = new HashMap<>();

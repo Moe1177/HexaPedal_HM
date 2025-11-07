@@ -22,31 +22,23 @@ public class RideHistoryController {
 
     private final RideHistoryService rideHistoryService;
 
-    /**
-     * Get all rides for a user - with proper authorization
-     * Users can only access their own ride history
-     */
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('RIDER') or hasRole('OPERATOR')")
     public ResponseEntity<?> getAllRidesForUser(
             @AuthenticationPrincipal User authenticatedUser,
             @PathVariable Integer userId) {
-        
-        // Riders can only see their own history
+
         if (authenticatedUser instanceof Rider) {
-            if (!authenticatedUser.getId().equals(userId.longValue())) {
+            if (!(authenticatedUser.getId() ==(userId.longValue()))) {
                 return ResponseEntity.status(403).body("You can only view your own ride history");
             }
         }
-        // Operators can view any user's history
 
         List<Rides> rides = rideHistoryService.getRidesByUserId(userId);
         return ResponseEntity.ok(rides);
     }
 
-    /**
-     * Get ride history for the authenticated user
-     */
+
     @GetMapping("/me")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getMyRideHistory(@AuthenticationPrincipal User user) {

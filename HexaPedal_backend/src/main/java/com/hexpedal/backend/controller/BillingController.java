@@ -24,9 +24,6 @@ public class BillingController {
     private final BillingService billingService;
     private final RidesRepository ridesRepository;
 
-    /**
-     * Get trip summary with cost breakdown - Rider only (R-PRC-03)
-     */
     @GetMapping("/trip/{rideId}")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getTripSummary(
@@ -40,8 +37,7 @@ public class BillingController {
         Rides ride = ridesRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
-        // Verify the ride belongs to the authenticated user
-        if (!ride.getUser().getId().equals(user.getId())) {
+        if (!(ride.getUser().getId() ==(user.getId()))) {
             return ResponseEntity.status(403).body("You can only view your own trip summaries");
         }
 
@@ -55,10 +51,6 @@ public class BillingController {
         return ResponseEntity.ok(summary);
     }
 
-    /**
-     * Get billing history with all trip details - Rider only (R-PRC-04, R-PRC-05)
-     * Provides: start date/time, bike id, origin station, arrival station, charges
-     */
     @GetMapping("/history")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getBillingHistory(@AuthenticationPrincipal User user) {
@@ -76,9 +68,6 @@ public class BillingController {
         return ResponseEntity.ok(history);
     }
 
-    /**
-     * Calculate cost for a trip (typically called when trip ends)
-     */
     @PostMapping("/calculate-trip-cost")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> calculateTripCost(
@@ -92,21 +81,17 @@ public class BillingController {
         Rides ride = ridesRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
-        // Verify the ride belongs to the authenticated user
-        if (!ride.getUser().getId().equals(user.getId())) {
+        if (!(ride.getUser().getId() ==(user.getId()))) {
             return ResponseEntity.status(403).body("You can only calculate costs for your own trips");
         }
 
-        // Calculate cost based on user's subscription status
         double cost = billingService.calculateTripCost(user.getId(), ride.getDistance());
-        
-        // Update ride with calculated cost
+
         billingService.updateRideCost(rideId, cost);
 
         return ResponseEntity.ok(new CostResponse(cost, "Cost calculated successfully"));
     }
 
-    // Simple response record
     private record CostResponse(double cost, String message) {}
 }
 

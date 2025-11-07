@@ -29,8 +29,7 @@ public class SubscriptionController {
     public ResponseEntity<?> createCheckoutSession(
             @AuthenticationPrincipal User user,
             @RequestBody com.hexpedal.backend.dto.CheckoutSessionRequestDto request) {
-        
-        // Verify user is a Rider
+
         if (!(user instanceof Rider)) {
             return ResponseEntity.status(403).body("Only riders can subscribe to plans");
         }
@@ -60,8 +59,7 @@ public class SubscriptionController {
     public ResponseEntity<?> subscribe(
             @AuthenticationPrincipal User user,
             @RequestBody SubscribeRequestDto request) {
-        
-        // Verify user is a Rider
+
         if (!(user instanceof Rider)) {
             return ResponseEntity.status(403).body("Only riders can subscribe to plans");
         }
@@ -81,9 +79,6 @@ public class SubscriptionController {
         }
     }
 
-    /**
-     * Cancel subscription at period end - Rider only
-     */
     @PostMapping("/cancel")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> cancelSubscription(@AuthenticationPrincipal User user) {
@@ -102,9 +97,6 @@ public class SubscriptionController {
         }
     }
 
-    /**
-     * Get current active subscription - Rider only
-     */
     @GetMapping("/current")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getCurrentSubscription(@AuthenticationPrincipal User user) {
@@ -123,9 +115,6 @@ public class SubscriptionController {
         return ResponseEntity.ok(SubscriptionDto.from(subscription.get()));
     }
 
-    /**
-     * Check if user has active subscription - Rider only
-     */
     @GetMapping("/status")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getSubscriptionStatus(@AuthenticationPrincipal User user) {
@@ -138,7 +127,6 @@ public class SubscriptionController {
         return ResponseEntity.ok(new SubscriptionStatusResponse(hasActive));
     }
 
-    // Response records
     private record SubscriptionStatusResponse(boolean hasActiveSubscription) {}
     private record CheckoutSessionResponse(String checkoutUrl, String message) {}
 }

@@ -19,9 +19,6 @@ public class PricingService {
 
     private final SubscriptionPlanRepository subscriptionPlanRepository;
 
-    /**
-     * Get all active pricing plans for public display (R-PRC-01)
-     */
     public List<PricingPlanDto> getAllActivePricingPlans() {
         return subscriptionPlanRepository.findByActiveTrue()
                 .stream()
@@ -29,9 +26,6 @@ public class PricingService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Estimate trip cost based on duration for pay-per-trip users
-     */
     public CostEstimateDto estimateTripCost(double durationMinutes) {
         SubscriptionPlan payPerTripPlan = subscriptionPlanRepository.findByPlanType(PlanType.PAY_PER_TRIP)
                 .orElseThrow(() -> new RuntimeException("Pay-per-trip plan not configured"));

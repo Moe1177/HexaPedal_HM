@@ -7,7 +7,7 @@ import java.time.Instant;
 public record BillingHistoryDto(
         Integer rideId,
         Instant startDateTime,
-        Long bikeId,
+        Integer bikeId,
         String originStation,
         String arrivalStation,
         double distance,

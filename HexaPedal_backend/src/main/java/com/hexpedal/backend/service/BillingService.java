@@ -23,13 +23,7 @@ public class BillingService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final RidesRepository ridesRepository;
 
-    /**
-     * Calculate trip cost deterministically based on plan rules and trip facts (R-PRC-02)
-     * 
-     * Rules:
-     * - Active subscription (Monthly/Yearly): $0.00 per trip (unlimited rides)
-     * - No subscription (Pay-per-trip): $0.01 CAD per minute
-     */
+
     @Transactional
     public double calculateTripCost(Long userId, double durationMinutes) {
         // Check if user has an active subscription
@@ -55,9 +49,7 @@ public class BillingService {
         return cost.doubleValue();
     }
 
-    /**
-     * Generate a human-readable cost breakdown for a trip
-     */
+
     public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
         Optional<UserSubscription> activeSubscription = 
                 userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
@@ -75,9 +67,7 @@ public class BillingService {
         return String.format("Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD", durationMinutes, cost);
     }
 
-    /**
-     * Update the cost of an existing ride
-     */
+
     @Transactional
     public void updateRideCost(Integer rideId, double cost) {
         Rides ride = ridesRepository.findById(rideId)

@@ -6,7 +6,7 @@ import java.time.Instant;
 
 public record TripSummaryDto(
         Integer rideId,
-        Long bikeId,
+        Integer bikeId,
         String startLocation,
         String endLocation,
         Instant startTimestamp,
