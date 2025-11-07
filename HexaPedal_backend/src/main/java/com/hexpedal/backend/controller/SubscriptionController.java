@@ -23,11 +23,7 @@ public class SubscriptionController {
     private final PaymentService paymentService;
     private final UserSubscriptionRepository userSubscriptionRepository;
 
-    /**
-     * Create Checkout Session for subscription - Rider only
-     * Returns a URL to redirect user to Stripe's hosted checkout page
-     * THIS IS THE RECOMMENDED METHOD FOR SUBSCRIPTIONS
-     */
+
     @PostMapping("/create-checkout-session")
     @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> createCheckoutSession(

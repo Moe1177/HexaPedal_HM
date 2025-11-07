@@ -90,7 +90,63 @@ public class PaymentService {
     }
 
     /**
-     * Create a Stripe subscription for a user
+     * Create a Stripe Checkout Session for subscription
+     * Returns a URL that frontend should redirect user to
+     */
+    @Transactional
+    public String createCheckoutSession(Long userId, PlanType planType, String successUrl, String cancelUrl) 
+            throws Exception {
+        
+        User user = userRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        SubscriptionPlan plan = subscriptionPlanRepo.findByPlanType(planType)
+                .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
+
+        if (plan.getStripePriceId() == null) {
+            throw new RuntimeException("Stripe price ID not configured for plan: " + planType);
+        }
+
+        // Ensure customer exists in Stripe
+        String customerId = ensureStripeCustomer(user);
+
+        // Cancel any existing active subscription for this user
+        userSubscriptionRepo.findActiveSubscriptionByUserId(userId)
+                .ifPresent(existing -> {
+                    try {
+                        cancelSubscriptionInStripe(existing.getStripeSubscriptionId());
+                        existing.setStatus(SubscriptionStatus.CANCELLED);
+                        userSubscriptionRepo.save(existing);
+                    } catch (StripeException e) {
+                        throw new RuntimeException("Failed to cancel existing subscription", e);
+                    }
+                });
+
+        // Create Checkout Session
+        Map<String, Object> params = new HashMap<>();
+        params.put("customer", customerId);
+        params.put("mode", "subscription");
+        params.put("line_items", new Object[]{
+            Map.of(
+                "price", plan.getStripePriceId(),
+                "quantity", 1
+            )
+        });
+        params.put("success_url", successUrl);
+        params.put("cancel_url", cancelUrl);
+        
+        // Store user ID in metadata to identify on webhook
+        params.put("metadata", Map.of("userId", userId.toString()));
+        
+        com.stripe.model.checkout.Session session = 
+                com.stripe.model.checkout.Session.create(params);
+
+        return session.getUrl();
+    }
+
+    /**
+     * Create a Stripe subscription for a user (Direct API method)
+     * Use createCheckoutSession for hosted checkout page instead
      */
     @Transactional
     public UserSubscription createSubscription(Long userId, PlanType planType, String paymentMethodId) 
