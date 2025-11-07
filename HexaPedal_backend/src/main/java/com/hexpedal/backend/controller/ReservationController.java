@@ -1,15 +1,24 @@
 package com.hexpedal.backend.controller;
 
 
-import com.hexpedal.backend.service.ReservationService;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.hexpedal.backend.dto.TripSummaryDTO;
+import com.hexpedal.backend.service.ReservationService;
+import com.stripe.exception.StripeException;
+
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.Min;
 
 @RestController
 @RequestMapping("/api")
@@ -50,13 +59,13 @@ public class ReservationController {
     }
 
     @PostMapping("/trips/return")
-    public ResponseEntity<Void> endTrip(
+    public ResponseEntity<TripSummaryDTO> endTrip(
             @RequestParam @Min(1) Integer bikeId,
             @RequestParam @Min(1) Long userId,
             @RequestParam @Min(1) Long stationId
-    ) {
-        reservationService.endTrip(bikeId, userId, stationId);
-        return ResponseEntity.noContent().build();
+    ) throws StripeException {
+        TripSummaryDTO summary = reservationService.endTrip(bikeId, userId, stationId);
+        return ResponseEntity.ok(summary);
     }
 
      @PostMapping("/trips/guest/{bikeId}/start")
