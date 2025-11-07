@@ -27,7 +27,7 @@ public class BillingService {
     @Transactional
     public double calculateTripCost(Long userId, double durationMinutes) {
         // Check if user has an active subscription
-        Optional<UserSubscription> activeSubscription = 
+        Optional<UserSubscription> activeSubscription =
                 userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
 
         if (activeSubscription.isPresent()) {
@@ -38,16 +38,16 @@ public class BillingService {
             }
         }
 
-        // Pay-per-trip calculation: $0.01 CAD per minute
-        SubscriptionPlan payPerTripPlan = subscriptionPlanRepository.findByPlanType(PlanType.PAY_PER_TRIP)
-                .orElseThrow(() -> new RuntimeException("Pay-per-trip plan not configured"));
-
-        BigDecimal ratePerMinute = payPerTripPlan.getRatePerMinute();
+        // Pay-per-trip calculation: $0.50 minimum + $0.01 per minute
+        BigDecimal baseCharge = new BigDecimal("0.50");
+        BigDecimal perMinute = new BigDecimal("0.01");
         BigDecimal duration = BigDecimal.valueOf(durationMinutes);
-        BigDecimal cost = ratePerMinute.multiply(duration).setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal cost = baseCharge.add(perMinute.multiply(duration)).setScale(2, RoundingMode.HALF_UP);
 
         return cost.doubleValue();
     }
+
 
 
     public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
