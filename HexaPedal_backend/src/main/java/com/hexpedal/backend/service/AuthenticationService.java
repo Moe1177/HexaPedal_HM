@@ -1,18 +1,21 @@
 package com.hexpedal.backend.service;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Random;
+
+import com.hexpedal.backend.model.Rider;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import com.hexpedal.backend.model.Operator;
+
 import com.hexpedal.backend.dto.LoginUserDto;
 import com.hexpedal.backend.dto.RegisterUserDto;
 import com.hexpedal.backend.dto.VerifyUserDto;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.UserRepository;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.Random;
 
 @Service
 public class AuthenticationService {
@@ -21,20 +24,49 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
 
-    public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, EmailService emailService) {
+    private final PaymentService paymentService;
+
+
+    public AuthenticationService(UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, EmailService emailService, PaymentService paymentService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.emailService = emailService;
+        this.paymentService = paymentService;
     }
 
-    public User signup(RegisterUserDto input){
-        User user = new User(input.getFullName(),input.getAddress(), input.getRole(),input.getUsername(),input.getEmail(), passwordEncoder.encode(input.getPassword()));
-        user.setVerificationCode(generateVerificationCode());
-        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
-        user.setEnabled(false);
-        sendVerificationEmail(user);
-        return userRepository.save(user);
+    public User signup(RegisterUserDto input) throws Exception {
+        if (userRepository.findByEmail(input.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already in use");
+        }
+        if (userRepository.findByUsername(input.getUsername()).isPresent()) {
+            throw new RuntimeException("Username already in use");
+        }
+
+        Rider rider = Rider.builder()
+                .fullName(input.getFullName())
+                .address(input.getAddress())
+                .username(input.getUsername())
+                .email(input.getEmail())
+                .password(passwordEncoder.encode(input.getPassword()))
+                .enabled(false)
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+
+        User saved = userRepository.save(rider);
+
+        // *** here ***
+        if(input.getStripePaymentMethodId()!= null) {
+            paymentService.saveStripePaymentMethod(
+                    saved.getId(),
+                    input.getStripePaymentMethodId(),
+                    input.getBillingAddress(),
+                    input.getCardholderName()
+            );
+        }
+        sendVerificationEmail(saved);
+        return saved;
     }
 
     public User authenticate(LoginUserDto input){
@@ -70,6 +102,26 @@ public class AuthenticationService {
             throw new RuntimeException("User not found");
         }
     }
+    public User createOperator(RegisterUserDto input) {
+        if (userRepository.findByEmail(input.getEmail()).isPresent())
+            throw new RuntimeException("Email already in use");
+        if (userRepository.findByUsername(input.getUsername()).isPresent())
+            throw new RuntimeException("Username already in use");
+    
+        Operator op = Operator.builder()
+                .fullName(input.getFullName())
+                .address(input.getAddress())
+                .username(input.getUsername())
+                .email(input.getEmail())
+                .password(passwordEncoder.encode(input.getPassword()))
+                .enabled(false) 
+                .verificationCode(generateVerificationCode())
+                .verificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15))
+                .build();
+    
+        return userRepository.save(op);
+    }
+    
 
     public void resendVerificationCode(String email) {
         Optional<User> optionalUser = userRepository.findByEmail(email);
@@ -106,5 +158,13 @@ public class AuthenticationService {
         Random random = new Random();
         int code = 100000 + random.nextInt(900000);
         return String.valueOf(code);
+    }
+
+    public boolean emailExists(String email) {
+        return userRepository.findByEmail(email).isPresent();
+    }
+
+    public boolean usernameExists(String username) {
+        return userRepository.findByUsername(username).isPresent();
     }
 }
