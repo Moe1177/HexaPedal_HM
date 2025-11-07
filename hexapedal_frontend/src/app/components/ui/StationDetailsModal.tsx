@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getStationDetails, StationDetails, DockInfo } from "@/app/services/stations/getStationDetails";
-import { reserveBike } from "@/app/services/user/rider/reserveBike";
+// import { reserveBike } from "@/app/services/user/rider/reserveBike";
 import { getEmailFromToken } from "@/app/services/user/getCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -57,7 +57,7 @@ export default function StationDetailsModal({
     setIsReserving(true);
     setError(null);
     try {
-      await reserveBike(bikeId, email, token);
+      // await reserveBike(bikeId, email, token);
       if (onReserveBike) {
         onReserveBike(bikeId);
       }
