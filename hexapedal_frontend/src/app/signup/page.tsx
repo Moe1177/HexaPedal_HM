@@ -53,7 +53,7 @@ function SignupFormInner() {
   const [country, setCountry] = useState("CA");
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-  
+
   async function checkEmailAvailability(value: string) {
     setEmailTaken(null);
     if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return;
@@ -86,14 +86,14 @@ function SignupFormInner() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Enter a valid email";
     if (!password) return "Password is required";
     if (password.length < 6) return "Password must be at least 6 characters";
-    
+
     // Payment validation
     if (!cardholderName.trim()) return "Cardholder name is required";
     if (!line1.trim()) return "Billing address is required";
     if (!city.trim()) return "City is required";
     if (!state.trim()) return "State/Province is required";
     if (!postalCode.trim()) return "Postal code is required";
-    
+
     return null;
   }
 
@@ -210,7 +210,7 @@ function SignupFormInner() {
       {/* Personal Information Section */}
       <div className="space-y-4 rounded-lg border border-gray-700 bg-gray-800 p-6">
         <h2 className="text-xl font-semibold text-gray-100">Personal Information</h2>
-        
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <label htmlFor="fullName" className="block text-sm font-medium text-gray-200">
@@ -321,7 +321,7 @@ function SignupFormInner() {
       {/* Payment Information Section */}
       <div className="space-y-4 rounded-lg border border-blue-700 bg-blue-900/20 p-6">
         <h2 className="text-xl font-semibold text-gray-100">Payment Information</h2>
-        
+
         <div className="space-y-1">
           <label htmlFor="cardholderName" className="block text-sm font-medium text-gray-200">
             Cardholder Name
@@ -497,6 +497,6 @@ export default function Signup() {
           <SignupFormInner />
         </Elements>
       </div>
-    </main>
+    </div>
   );
 }

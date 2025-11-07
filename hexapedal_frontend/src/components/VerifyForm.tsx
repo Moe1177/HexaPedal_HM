@@ -54,7 +54,7 @@ export default function VerifyForm({ initialEmail = "" }: VerifyFormProps) {
       }
 
       setSuccessMessage("Verified! You can now sign in.");
-      setTimeout(() => router.push("/dashboard/login"), 800);
+      setTimeout(() => router.push("/login"), 800);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Verification failed";
       setErrorMessage(message);

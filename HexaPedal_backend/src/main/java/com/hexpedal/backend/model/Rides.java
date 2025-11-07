@@ -50,4 +50,9 @@ public class Rides {
     @Column(name = "cost", nullable = false)
     private double cost;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bike_id")
+    @JsonIgnore
+    private Bike bike;
+
 }
