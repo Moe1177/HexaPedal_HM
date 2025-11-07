@@ -4,8 +4,6 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -44,9 +42,11 @@ public class BillingCharge {
     @Column(name = "bike_id", nullable = false)
     private Integer bikeId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plan_type", nullable = false)
-    private SubscriptionPlan planType;
+    @Column(name = "stripe_price_id")
+    private String stripePriceId; // Stripe Price ID for the plan used
+    
+    @Column(name = "plan_name")
+    private String planName; // Display name from Stripe Product
 
     @Column(name = "start_timestamp", nullable = false)
     private Instant startTimestamp;
@@ -65,21 +65,6 @@ public class BillingCharge {
 
     @Column(name = "distance_km", nullable = false)
     private Double distanceKm;
-
-    @Column(name = "base_fee", nullable = false)
-    private Double baseFee;
-
-    @Column(name = "time_charge", nullable = false)
-    private Double timeCharge;
-
-    @Column(name = "distance_charge", nullable = false)
-    private Double distanceCharge;
-
-    @Column(name = "unlock_fee", nullable = false)
-    private Double unlockFee;
-
-    @Column(name = "total_cost", nullable = false)
-    private Double totalCost;
 
     @Column(name = "stripe_charge_id", unique = true)
     private String stripeChargeId;

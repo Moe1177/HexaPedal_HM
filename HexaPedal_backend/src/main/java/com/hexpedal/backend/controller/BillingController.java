@@ -33,9 +33,15 @@ public class BillingController {
 
     @GetMapping("/plan")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getCurrentPlan(@AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getCurrentPlan(@AuthenticationPrincipal User user) throws com.stripe.exception.StripeException {
+        com.hexpedal.backend.model.StripePlan plan = billingService.getUserPlan(user.getId());
+        if (plan == null) {
+            return ResponseEntity.ok(Map.of("plan", null, "hasSubscription", false));
+        }
         return ResponseEntity.ok(Map.of(
-                "plan", billingService.getUserPlan(user.getId()).name()
+                "plan", plan.getDisplayName(),
+                "priceId", plan.getPriceId(),
+                "hasSubscription", true
         ));
     }
 }

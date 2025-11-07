@@ -4,8 +4,6 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -38,9 +36,8 @@ public class UserSubscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SubscriptionPlan plan;
+    @Column(name = "plan_name")
+    private String planName; // Display name from Stripe Product
 
     @Column(name = "stripe_subscription_id", unique = true)
     private String stripeSubscriptionId;

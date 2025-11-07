@@ -11,7 +11,7 @@ import com.hexpedal.backend.dto.TripSummaryDTO;
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.BillingCharge;
 import com.hexpedal.backend.model.Rides;
-import com.hexpedal.backend.model.SubscriptionPlan;
+import com.hexpedal.backend.model.StripePlan;
 import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
@@ -29,17 +29,15 @@ public class ReservationService {
     private final DockRepository dockRepo;
     private final DockingStationRepository dockstationRepo;
     private final RidesRepository ridesRepo;
-    private final PricingCalculationService pricingService;
     private final BillingService billingService;
     
 
-    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo, PricingCalculationService pricingService, BillingService billingService) {
+    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo, BillingService billingService) {
         this.userRepo = userRepo;
         this.bikeRepo = bikeRepo;
         this.dockRepo = dockRepo;
         this.dockstationRepo = dockstationRepo;
         this.ridesRepo = ridesRepo;
-        this.pricingService = pricingService;
         this.billingService = billingService;
     }
 
@@ -159,12 +157,11 @@ public class ReservationService {
         String startLocation = (bike.getTripStartStationName() != null) ? bike.getTripStartStationName() : "Unknown";
         String endLocation = station.getName();
 
-        // Get user's subscription plan (default to SINGLE_USE)
-        SubscriptionPlan plan = billingService.getUserPlan(userId);
-
-        // Calculate cost using pricing service
-        PricingCalculationService.TripCostDetails costDetails = 
-                pricingService.calculateCost(plan, durationMinutes);
+        // Get user's subscription plan from Stripe
+        StripePlan plan = billingService.getUserPlan(userId);
+        if (plan == null) {
+            throw new IllegalStateException("User must have an active subscription to complete a trip");
+        }
 
         // create and save ride
         Rides ride = new Rides();
@@ -175,13 +172,12 @@ public class ReservationService {
         ride.setStartTimestamp(startTs);
         ride.setEndTimestamp(endTs);
         ride.setDuration(durationMinutes);
-       
-        ride.setCost(costDetails.getTotalCost());
+        ride.setCost(0.0); 
         ridesRepo.save(ride);
 
-        // Create billing charge
+       
         BillingCharge charge = billingService.createBillingCharge(
-                user, ride, bikeId, plan, durationMinutes);
+                user, ride, bikeId, plan);
 
         // reset bike
         bike.setBikeStatus(BikeStatus.available);
@@ -199,13 +195,7 @@ public class ReservationService {
                 endTs,
                 durationMinutes,
                 0.0,
-                plan.name(),
-                new TripSummaryDTO.CostBreakdown(
-                        costDetails.getBaseFee(),
-                        costDetails.getTimeCharge(),
-                        costDetails.getUnlockFee(),
-                        costDetails.getTotalCost()
-                ),
+                plan.getDisplayName() != null ? plan.getDisplayName() : "No Plan",
                 charge.getChargeStatus(),
                 charge.getStripeChargeId()
         );

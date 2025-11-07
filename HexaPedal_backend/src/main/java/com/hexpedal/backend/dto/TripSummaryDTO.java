@@ -11,16 +11,8 @@ public record TripSummaryDTO(
     Instant endTimestamp,
     Double durationMinutes,
     Double distanceKm,
-    String planType,
-    CostBreakdown costBreakdown,
+    String planName,
     String chargeStatus,
     String stripeChargeId
-) {
-    public record CostBreakdown(
-        Double baseFee,
-        Double timeCharge,
-        Double unlockFee,
-        Double totalCost
-    ) {}
-}
+) {}
 

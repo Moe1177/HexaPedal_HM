@@ -7,15 +7,12 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.hexpedal.backend.model.SubscriptionPlan;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.model.UserSubscription;
 import com.hexpedal.backend.repository.UserRepository;
 import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
-import com.stripe.model.checkout.Session;
-import com.stripe.param.checkout.SessionCreateParams;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +22,7 @@ public class StripeSubscriptionService {
 
     private final UserRepository userRepository;
     private final UserSubscriptionRepository subscriptionRepository;
+    private final StripePlanService stripePlanService;
 
     @Value("${stripe.success-url:http://localhost:3000/success}")
     private String defaultSuccessUrl;
@@ -46,38 +44,54 @@ public class StripeSubscriptionService {
         return customer.getId();
     }
 
-    public Session createCheckoutSession(Long userId, SubscriptionPlan plan, 
+    public com.stripe.model.checkout.Session createCheckoutSession(Long userId, String priceId, 
                                          String successUrl, String cancelUrl) throws StripeException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
         String customerId = ensureStripeCustomer(user);
 
-        String priceId = getStripePriceIdForPlan(plan);
+        if (priceId == null || priceId.isEmpty()) {
+            throw new IllegalArgumentException("Stripe Price ID is required");
+        }
 
-        SessionCreateParams params = SessionCreateParams.builder()
-                .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
+        com.stripe.param.checkout.SessionCreateParams params = 
+                com.stripe.param.checkout.SessionCreateParams.builder()
+                .setMode(com.stripe.param.checkout.SessionCreateParams.Mode.SUBSCRIPTION)
                 .setCustomer(customerId)
                 .setSuccessUrl(successUrl != null ? successUrl : defaultSuccessUrl)
                 .setCancelUrl(cancelUrl != null ? cancelUrl : defaultCancelUrl)
                 .addLineItem(
-                        SessionCreateParams.LineItem.builder()
+                        com.stripe.param.checkout.SessionCreateParams.LineItem.builder()
                                 .setPrice(priceId)
                                 .setQuantity(1L)
                                 .build()
                 )
                 .putMetadata("user_id", userId.toString())
-                .putMetadata("plan_type", plan.name())
+                .putMetadata("price_id", priceId)
                 .build();
 
-        return Session.create(params);
+        return com.stripe.model.checkout.Session.create(params);
     }
 
-   
-    private String getStripePriceIdForPlan(SubscriptionPlan plan) throws StripeException {
-        throw new IllegalStateException(
-                "Stripe Price IDs must be configured. "
-        );
+    /**
+     * Create a Stripe Billing Portal session for subscription management
+     */
+    public com.stripe.model.billingportal.Session createBillingPortalSession(Long userId, String returnUrl) throws StripeException {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        if (user.getStripeCustomerId() == null) {
+            throw new IllegalStateException("User does not have a Stripe customer ID");
+        }
+
+        com.stripe.param.billingportal.SessionCreateParams params = 
+                com.stripe.param.billingportal.SessionCreateParams.builder()
+                .setCustomer(user.getStripeCustomerId())
+                .setReturnUrl(returnUrl)
+                .build();
+
+        return com.stripe.model.billingportal.Session.create(params);
     }
 
     public void handleSubscriptionCreatedOrUpdated(String stripeSubscriptionId) throws StripeException {
@@ -88,7 +102,8 @@ public class StripeSubscriptionService {
         User user = userRepository.findByStripeCustomerId(customerId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found for customer: " + customerId));
 
-        SubscriptionPlan plan = determinePlanFromStripeSubscription(stripeSubscription);
+        String priceId = stripeSubscription.getItems().getData().get(0).getPrice().getId();
+        com.hexpedal.backend.model.StripePlan stripePlan = stripePlanService.getPlanByPriceId(priceId);
 
         Optional<UserSubscription> existing = subscriptionRepository
                 .findByStripeSubscriptionId(stripeSubscriptionId);
@@ -99,13 +114,15 @@ public class StripeSubscriptionService {
         } else {
             subscription = UserSubscription.builder()
                     .user(user)
-                    .plan(plan)
+                    .planName(stripePlan.getDisplayName())
                     .stripeSubscriptionId(stripeSubscriptionId)
+                    .stripePriceId(priceId)
                     .build();
         }
 
         subscription.setStatus(stripeSubscription.getStatus());
-        subscription.setStripePriceId(stripeSubscription.getItems().getData().get(0).getPrice().getId());
+        subscription.setStripePriceId(priceId);
+        subscription.setPlanName(stripePlan.getDisplayName());
         subscription.setCurrentPeriodStart(
                 java.time.Instant.ofEpochSecond(stripeSubscription.getCurrentPeriodStart())
         );
@@ -117,19 +134,6 @@ public class StripeSubscriptionService {
         subscriptionRepository.save(subscription);
     }
 
- 
-    private SubscriptionPlan determinePlanFromStripeSubscription(
-            com.stripe.model.Subscription stripeSubscription) {
-        Map<String, String> metadata = stripeSubscription.getMetadata();
-        if (metadata != null && metadata.containsKey("plan_type")) {
-            try {
-                return SubscriptionPlan.valueOf(metadata.get("plan_type"));
-            } catch (IllegalArgumentException e) {
-            }
-        }
-        
-        return SubscriptionPlan.SINGLE_USE;
-    }
 
     public Optional<UserSubscription> getActiveSubscription(Long userId) {
         return subscriptionRepository.findByUserIdAndStatusIn(

@@ -13,16 +13,8 @@ public record BillingHistoryDTO(
     String endLocation,
     Double durationMinutes,
     Double distanceKm,
-    CostSummary costSummary,
     String chargeStatus,
     String stripeChargeId,
     Instant createdAt
-) {
-    public record CostSummary(
-        Double baseFee,
-        Double timeCharge,
-        Double unlockFee,
-        Double totalCost
-    ) {}
-}
+) {}
 
