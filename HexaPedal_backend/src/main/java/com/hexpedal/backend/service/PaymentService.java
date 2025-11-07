@@ -1,14 +1,21 @@
 package com.hexpedal.backend.service;
 
-import com.hexpedal.backend.model.*;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+
+import com.hexpedal.backend.model.BillingAddress;
+import com.hexpedal.backend.model.PaymentBrand;
+import com.hexpedal.backend.model.PaymentMethod;
+import com.hexpedal.backend.model.PaymentMethodType;
+import com.hexpedal.backend.model.PaymentProvider;
+import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.PaymentMethodRepository;
 import com.hexpedal.backend.repository.UserRepository;
 import com.stripe.exception.StripeException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -17,7 +24,6 @@ public class PaymentService {
     private final PaymentMethodRepository paymentMethodRepo;
     private final UserRepository userRepo;
 
-    // Ensure your User has a column: private String stripeCustomerId;
     private String ensureStripeCustomer(User user) throws StripeException {
         if (user.getStripeCustomerId() != null) return user.getStripeCustomerId();
         Map<String, Object> params = new HashMap<>();
@@ -36,13 +42,11 @@ public class PaymentService {
         User user = userRepo.findById(userId).orElseThrow();
         String customerId = ensureStripeCustomer(user);
 
-        // Attach pm to customer
         Map<String, Object> attachParams = new HashMap<>();
         attachParams.put("customer", customerId);
         com.stripe.model.PaymentMethod pm = com.stripe.model.PaymentMethod.retrieve(stripePaymentMethodId);
         pm = pm.attach(attachParams);
 
-        // Optionally set as default on the customer
         Map<String, Object> invoiceSettings = Map.of("default_payment_method", stripePaymentMethodId);
         com.stripe.model.Customer updated = com.stripe.model.Customer.retrieve(customerId)
                 .update(Map.of("invoice_settings", invoiceSettings));
@@ -65,7 +69,6 @@ public class PaymentService {
                 .active(true)
                 .build();
 
-        // If setting default, unset previous default
         paymentMethodRepo.findByUserIdAndDefaultMethodTrue(userId)
                 .ifPresent(old -> { old.setDefaultMethod(false); paymentMethodRepo.save(old); });
 

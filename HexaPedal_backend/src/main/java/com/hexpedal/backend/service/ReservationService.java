@@ -1,21 +1,24 @@
 package com.hexpedal.backend.service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Objects;
+
+import org.springframework.stereotype.Service;
+
+import com.hexpedal.backend.dto.TripSummaryDTO;
+import com.hexpedal.backend.model.BikeStatus;
+import com.hexpedal.backend.model.BillingCharge;
+import com.hexpedal.backend.model.Rides;
+import com.hexpedal.backend.model.SubscriptionPlan;
+import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
-import java.util.Objects;
-import java.time.ZoneId;
-import java.time.Instant;
+import com.stripe.exception.StripeException;
 
-import java.time.Duration;
-import org.springframework.stereotype.Service;
-
-
-import com.hexpedal.backend.model.BikeStatus;
-import com.hexpedal.backend.model.Rides;
-import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
@@ -26,14 +29,18 @@ public class ReservationService {
     private final DockRepository dockRepo;
     private final DockingStationRepository dockstationRepo;
     private final RidesRepository ridesRepo;
+    private final PricingCalculationService pricingService;
+    private final BillingService billingService;
     
 
-    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo) {
+    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo, PricingCalculationService pricingService, BillingService billingService) {
         this.userRepo = userRepo;
         this.bikeRepo = bikeRepo;
         this.dockRepo = dockRepo;
         this.dockstationRepo = dockstationRepo;
         this.ridesRepo = ridesRepo;
+        this.pricingService = pricingService;
+        this.billingService = billingService;
     }
 
     public void reserveBike(String email, Integer bikeId) {
@@ -113,7 +120,7 @@ public class ReservationService {
     
         bikeRepo.save(bike);
     }
-    public void endTrip(Integer bikeId, Long userId, Long stationId){
+    public TripSummaryDTO endTrip(Integer bikeId, Long userId, Long stationId) throws StripeException {
         var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
                 .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
 
@@ -151,20 +158,30 @@ public class ReservationService {
 
         String startLocation = (bike.getTripStartStationName() != null) ? bike.getTripStartStationName() : "Unknown";
         String endLocation = station.getName();
-        double distanceKm = 0.0d; // TODO: compute if you have GPS/graph
-        double cost = 0.0d;       // TODO: compute pricing (e.g., base + per-minute)
+
+        // Get user's subscription plan (default to SINGLE_USE)
+        SubscriptionPlan plan = billingService.getUserPlan(userId);
+
+        // Calculate cost using pricing service
+        PricingCalculationService.TripCostDetails costDetails = 
+                pricingService.calculateCost(plan, durationMinutes);
 
         // create and save ride
         Rides ride = new Rides();
         ride.setUser(user);
+        ride.setBikeId(bikeId);
         ride.setStartLocation(startLocation);
         ride.setEndLocation(endLocation);
         ride.setStartTimestamp(startTs);
         ride.setEndTimestamp(endTs);
         ride.setDuration(durationMinutes);
-        ride.setDistance(distanceKm);
-        ride.setCost(cost);
+       
+        ride.setCost(costDetails.getTotalCost());
         ridesRepo.save(ride);
+
+        // Create billing charge
+        BillingCharge charge = billingService.createBillingCharge(
+                user, ride, bikeId, plan, durationMinutes);
 
         // reset bike
         bike.setBikeStatus(BikeStatus.available);
@@ -172,6 +189,26 @@ public class ReservationService {
         bike.setTripStartTime(null);
         bike.setTripStartStationName(null);
         bikeRepo.save(bike);
+
+        return new TripSummaryDTO(
+                ride.getRide_id(),
+                bikeId,
+                startLocation,
+                endLocation,
+                startTs,
+                endTs,
+                durationMinutes,
+                0.0,
+                plan.name(),
+                new TripSummaryDTO.CostBreakdown(
+                        costDetails.getBaseFee(),
+                        costDetails.getTimeCharge(),
+                        costDetails.getUnlockFee(),
+                        costDetails.getTotalCost()
+                ),
+                charge.getChargeStatus(),
+                charge.getStripeChargeId()
+        );
     }
     public void expireReservations(){
         var now = LocalDateTime.now();
