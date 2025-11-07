@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { BillingSummary, PlanType } from "@/types/Billing";
+import { BillingSummary, PlanType, Subscription } from "@/types/Billing";
 import { getBillingInfo } from "@/app/services/user/rider/getBillingInfo";
+import { getCurrentSubscription } from "@/app/services/subscriptions/getCurrentSubscription";
+import { cancelSubscription } from "@/app/services/subscriptions/cancelSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserIdFromToken } from "@/app/services/user/getCurrentUser";
 
@@ -10,8 +12,11 @@ export default function BillingView() {
   const { token } = useAuth();
   const [userId, setUserId] = useState<number | null>(null);
   const [billingInfo, setBillingInfo] = useState<BillingSummary | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -28,22 +33,11 @@ export default function BillingView() {
       return;
     }
 
-    if (userId) {
-      loadBillingInfo();
-    } else {
-      // If token exists but userId is null, use mock data after brief delay
-      const timer = setTimeout(() => {
-        setBillingInfo(getMockBillingInfo());
-        setIsLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [userId, token]);
+    loadBillingInfo();
+  }, [token]);
 
   const loadBillingInfo = async () => {
-    if (!userId || !token) {
-      // Use mock data if userId is not available
-      setBillingInfo(getMockBillingInfo());
+    if (!token) {
       setIsLoading(false);
       return;
     }
@@ -51,15 +45,44 @@ export default function BillingView() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getBillingInfo(userId, token);
-      setBillingInfo(data);
+      // Load subscription data
+      const sub = await getCurrentSubscription(token);
+      setSubscription(sub);
+
+      // Try to load billing info if available
+      if (userId) {
+        try {
+          const data = await getBillingInfo(userId, token);
+          setBillingInfo(data);
+        } catch (err) {
+          console.error("Failed to load billing info:", err);
+          // Continue without billing info
+        }
+      }
     } catch (err) {
-      // If API doesn't exist yet, show mock data
-      console.error("Failed to load billing info:", err);
-      setBillingInfo(getMockBillingInfo());
-      setError(null); // Don't show error, just use mock data
+      console.error("Failed to load subscription:", err);
+      setError("Failed to load subscription information");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!token) return;
+
+    setIsCancelling(true);
+    try {
+      const cancelledSub = await cancelSubscription(token);
+      setSubscription(cancelledSub);
+      setShowCancelModal(false);
+      alert(
+        "Subscription cancelled successfully. It will remain active until the end of the current billing period."
+      );
+    } catch (err) {
+      console.error("Failed to cancel subscription:", err);
+      alert("Failed to cancel subscription. Please try again.");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -67,7 +90,7 @@ export default function BillingView() {
     return {
       currentPlan: {
         id: 1,
-        type: "monthly",
+        type: "MONTHLY",
         name: "Monthly Pass",
         description: "Unlimited rides for a month",
         price: 29.99,
@@ -100,7 +123,7 @@ export default function BillingView() {
           id: 2,
           date: "2024-10-15T14:30:00Z",
           description: "Ride #1234",
-          amount: 2.50,
+          amount: 2.5,
           currency: "USD",
           status: "paid",
           type: "ride",
@@ -120,12 +143,25 @@ export default function BillingView() {
 
   const getPlanBadgeColor = (type: PlanType) => {
     switch (type) {
-      case "monthly":
+      case "MONTHLY":
         return "bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400";
-      case "annual":
+      case "YEARLY":
         return "bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400";
-      case "hourly":
+      case "PAY_PER_TRIP":
         return "bg-sky-100 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400";
+      default:
+        return "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400";
+    }
+  };
+
+  const getSubscriptionStatusColor = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400";
+      case "CANCELLED":
+        return "bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400";
+      case "EXPIRED":
+        return "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400";
       default:
         return "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-400";
     }
@@ -170,68 +206,108 @@ export default function BillingView() {
     <div className="h-full bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6 overflow-y-auto">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Billing & Payment</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">Manage your subscription and view billing history</p>
+          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
+            Billing & Payment
+          </h1>
+          <p className="text-neutral-600 dark:text-neutral-400">
+            Manage your subscription and view billing history
+          </p>
         </div>
 
-        {/* Current Plan Card */}
+        {/* Current Subscription Card */}
         <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 border border-neutral-200 dark:border-neutral-700 mb-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">Current Plan</h2>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${getPlanBadgeColor(
-                    plan?.type || "monthly"
-                  )}`}
-                >
-                  {plan?.name || "No Plan"}
-                </span>
-              </div>
-              <p className="text-neutral-600 dark:text-neutral-400">{plan?.description || ""}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
-                ${plan?.price.toFixed(2) || "0.00"}
-              </p>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                /{plan?.billingCycle || "month"}
-              </p>
-            </div>
-          </div>
-
-          {plan?.validUntil && (
-            <div className="mb-4 p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
-              <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">Valid until</p>
-              <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                {formatDate(plan.validUntil)}
-              </p>
-            </div>
-          )}
-
-          {plan?.features && plan.features.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-3">Plan Features</h3>
-              <ul className="space-y-2">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-                    <svg
-                      className="w-5 h-5 text-emerald-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+          {subscription ? (
+            <>
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                      Current Subscription
+                    </h2>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getPlanBadgeColor(
+                        subscription.planType
+                      )}`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+                      {subscription.planName}
+                    </span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getSubscriptionStatusColor(
+                        subscription.status
+                      )}`}
+                    >
+                      {subscription.status}
+                    </span>
+                  </div>
+                  <p className="text-neutral-600 dark:text-neutral-400">
+                    {subscription.planType === "MONTHLY" &&
+                      "Best for regular commuters"}
+                    {subscription.planType === "YEARLY" && "Maximum savings"}
+                    {subscription.planType === "PAY_PER_TRIP" &&
+                      "Perfect for occasional riders"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-neutral-900 dark:text-neutral-100">
+                    ${subscription.planPrice.toFixed(2)}
+                  </p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                    {subscription.planType === "MONTHLY" && "/month"}
+                    {subscription.planType === "YEARLY" && "/year"}
+                    {subscription.planType === "PAY_PER_TRIP" && "/trip"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+                    Current Period Start
+                  </p>
+                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    {formatDate(subscription.currentPeriodStart)}
+                  </p>
+                </div>
+                <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+                    Current Period End
+                  </p>
+                  <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    {formatDate(subscription.currentPeriodEnd)}
+                  </p>
+                </div>
+              </div>
+
+              {subscription.cancelAtPeriodEnd && (
+                <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    Subscription will be cancelled at the end of the current
+                    period
+                  </p>
+                </div>
+              )}
+
+              {subscription.status === "ACTIVE" &&
+                !subscription.cancelAtPeriodEnd && (
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors font-medium"
+                  >
+                    Cancel Subscription
+                  </button>
+                )}
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                No active subscription
+              </p>
+              <a
+                href="/"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-xl hover:from-indigo-700 hover:to-sky-700 transition-all font-semibold"
+              >
+                View Plans
+              </a>
             </div>
           )}
         </div>
@@ -239,32 +315,47 @@ export default function BillingView() {
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 border border-neutral-200 dark:border-neutral-700">
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Total Spent</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+              Total Spent
+            </p>
             <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               ${billingInfo?.totalSpent.toFixed(2) || "0.00"}
             </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">All time</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+              All time
+            </p>
           </div>
           <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 border border-neutral-200 dark:border-neutral-700">
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Rides This Month</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+              Rides This Month
+            </p>
             <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               {billingInfo?.ridesThisMonth || 0}
             </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">Current month</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+              Current month
+            </p>
           </div>
           <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 border border-neutral-200 dark:border-neutral-700">
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">Rides This Year</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
+              Rides This Year
+            </p>
             <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
               {billingInfo?.ridesThisYear || 0}
             </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">Current year</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
+              Current year
+            </p>
           </div>
         </div>
 
         {/* Billing History */}
         <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 border border-neutral-200 dark:border-neutral-700">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-4">Billing History</h2>
-          {billingInfo?.billingHistory && billingInfo.billingHistory.length > 0 ? (
+          <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-4">
+            Billing History
+          </h2>
+          {billingInfo?.billingHistory &&
+          billingInfo.billingHistory.length > 0 ? (
             <div className="space-y-4">
               {billingInfo.billingHistory.map((item) => (
                 <div
@@ -273,11 +364,16 @@ export default function BillingView() {
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
-                      <p className="font-medium text-neutral-900 dark:text-neutral-100">{item.description}</p>
+                      <p className="font-medium text-neutral-900 dark:text-neutral-100">
+                        {item.description}
+                      </p>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                          item.status
+                        )}`}
                       >
-                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                        {item.status.charAt(0).toUpperCase() +
+                          item.status.slice(1)}
                       </span>
                     </div>
                     <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -288,28 +384,67 @@ export default function BillingView() {
                     <p className="text-lg font-bold text-neutral-900 dark:text-neutral-100">
                       ${item.amount.toFixed(2)}
                     </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-500">{item.type}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-500">
+                      {item.type}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-neutral-600 dark:text-neutral-400">No billing history available</p>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                No billing history available
+              </p>
             </div>
           )}
         </div>
 
-        {billingInfo?.nextBillingDate && (
+        {subscription && subscription.currentPeriodEnd && (
           <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">Next billing date</p>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">
+              Next billing date
+            </p>
             <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-              {formatDate(billingInfo.nextBillingDate)}
+              {formatDate(subscription.currentPeriodEnd)}
             </p>
           </div>
         )}
       </div>
+
+      {/* Cancel Subscription Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-2xl p-6 max-w-md w-full border border-neutral-200 dark:border-neutral-700">
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
+                Cancel Subscription
+              </h3>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Are you sure you want to cancel your subscription? You will
+                continue to have access until the end of your current billing
+                period.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+                className="flex-1 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors font-medium"
+              >
+                Keep Subscription
+              </button>
+              <button
+                onClick={handleCancelSubscription}
+                disabled={isCancelling}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? "Cancelling..." : "Cancel Subscription"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
