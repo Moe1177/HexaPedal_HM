@@ -1,6 +1,9 @@
 package com.hexpedal.backend.controller;
 
 
+import com.hexpedal.backend.service.ReservationService;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.hexpedal.backend.dto.TripSummaryDTO;
+
 import com.hexpedal.backend.service.ReservationService;
 import com.stripe.exception.StripeException;
 
@@ -39,7 +43,12 @@ public class ReservationController {
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
     }
-  
+    @GetMapping("/reservations/bikes/status")
+    public ResponseEntity<UserReservationStatusDTO> getReservationStatus() {
+    String email = SecurityContextHolder.getContext().getAuthentication().getName();
+    var dto = reservationService.getCurrentReservationStatus(email);
+    return ResponseEntity.ok(dto);
+}
     
     
 

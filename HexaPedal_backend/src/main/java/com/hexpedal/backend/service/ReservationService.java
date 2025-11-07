@@ -19,6 +19,14 @@ import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
 import com.stripe.exception.StripeException;
 
+import java.time.Duration;
+import org.springframework.stereotype.Service;
+
+import com.hexpedal.backend.dto.UserReservationStatusDTO;
+
+import com.hexpedal.backend.model.BikeStatus;
+import com.hexpedal.backend.model.Rides;
+import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
@@ -228,6 +236,46 @@ public class ReservationService {
         }
     }
     
+
+    public UserReservationStatusDTO getCurrentReservationStatus(String email) {
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+    
+        var bikes = bikeRepo.findByCurrentUser(user);
+        if (bikes.isEmpty()) {
+            return new UserReservationStatusDTO(false, null, null, null, null);
+        }
+    
+        var bike = bikes.get(0);
+    
+        LocalDateTime expiresAt = null;
+        if (bike.getReservationExpDate() != null && bike.getReservationExpTime() != null) {
+            expiresAt = LocalDateTime.of(
+                bike.getReservationExpDate(),
+                bike.getReservationExpTime()
+            );
+        }
+    
+ 
+        if (expiresAt != null && expiresAt.isBefore(LocalDateTime.now())) {
+            bike.setBikeStatus(BikeStatus.available);
+            bike.setCurrentUser(null);
+            bike.setReservationExpDate(null);
+            bike.setReservationExpTime(null);
+            bikeRepo.save(bike);
+    
+            return new UserReservationStatusDTO(false, null, null, null, null);
+        }
+    
+        
+        return new UserReservationStatusDTO(
+                true,
+                bike.getId(),
+                bike.getType(), 
+                bike.getTripStartStationName(), 
+                expiresAt
+        );
+    }
 
 
         public void startGuestTrip(Integer bikeId) {
