@@ -40,7 +40,7 @@ public class SecurityConfiguration {
                 }))
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/auth/**", "/api/map/**", "/ws/**").permitAll()
+                        .requestMatchers("/auth/**", "/api/map/**", "/ws/**", "/api/pricing/**", "/api/webhooks/**").permitAll()
                         .requestMatchers("/api/reservations/**", "/api/trips/**").hasAnyRole("RIDER", "OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*").hasAnyRole("RIDER", "OPERATOR")
                         .requestMatchers("/api/trucks/**").hasRole("OPERATOR")
