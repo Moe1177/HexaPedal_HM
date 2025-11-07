@@ -30,20 +30,20 @@ public class PricingService {
     }
 
     /**
-     * Estimate trip cost based on distance for pay-per-trip users
+     * Estimate trip cost based on duration for pay-per-trip users
      */
-    public CostEstimateDto estimateTripCost(double distanceKm) {
+    public CostEstimateDto estimateTripCost(double durationMinutes) {
         SubscriptionPlan payPerTripPlan = subscriptionPlanRepository.findByPlanType(PlanType.PAY_PER_TRIP)
                 .orElseThrow(() -> new RuntimeException("Pay-per-trip plan not configured"));
 
-        BigDecimal ratePerKm = payPerTripPlan.getRatePerKm();
-        BigDecimal distance = BigDecimal.valueOf(distanceKm);
-        BigDecimal estimatedCost = ratePerKm.multiply(distance).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal ratePerMinute = payPerTripPlan.getRatePerMinute();
+        BigDecimal duration = BigDecimal.valueOf(durationMinutes);
+        BigDecimal estimatedCost = ratePerMinute.multiply(duration).setScale(2, RoundingMode.HALF_UP);
 
-        String breakdown = String.format("Distance: %.2f km × Rate: $%.2f/km = $%.2f CAD",
-                distanceKm, ratePerKm, estimatedCost);
+        String breakdown = String.format("Duration: %.1f minutes × Rate: $%.2f/minute = $%.2f CAD",
+                durationMinutes, ratePerMinute, estimatedCost);
 
-        return new CostEstimateDto(distanceKm, estimatedCost, breakdown);
+        return new CostEstimateDto(durationMinutes, estimatedCost, breakdown);
     }
 }
 

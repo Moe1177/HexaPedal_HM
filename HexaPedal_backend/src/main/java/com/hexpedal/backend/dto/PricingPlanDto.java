@@ -11,7 +11,7 @@ public record PricingPlanDto(
         String name,
         BigDecimal price,
         String description,
-        BigDecimal ratePerKm
+        BigDecimal ratePerMinute
 ) {
     public static PricingPlanDto from(SubscriptionPlan plan) {
         return new PricingPlanDto(
@@ -20,7 +20,7 @@ public record PricingPlanDto(
                 plan.getName(),
                 plan.getPrice(),
                 plan.getDescription(),
-                plan.getRatePerKm()
+                plan.getRatePerMinute()
         );
     }
 }

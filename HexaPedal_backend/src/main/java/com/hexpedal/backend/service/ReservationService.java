@@ -19,6 +19,8 @@ import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
+@AllArgsConstructor
+@RequiredArgsConstructor
 public class ReservationService {
     private static final int HOLD_MINUTES = 10; 
     private final UserRepository userRepo;
@@ -26,15 +28,8 @@ public class ReservationService {
     private final DockRepository dockRepo;
     private final DockingStationRepository dockstationRepo;
     private final RidesRepository ridesRepo;
-    
-
-    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo) {
-        this.userRepo = userRepo;
-        this.bikeRepo = bikeRepo;
-        this.dockRepo = dockRepo;
-        this.dockstationRepo = dockstationRepo;
-        this.ridesRepo = ridesRepo;
-    }
+    private final BillingService billingService;
+    private final PaymentService paymentService; 
 
     public void reserveBike(String email, Integer bikeId) {
    
@@ -152,11 +147,14 @@ public class ReservationService {
         String startLocation = (bike.getTripStartStationName() != null) ? bike.getTripStartStationName() : "Unknown";
         String endLocation = station.getName();
         double distanceKm = 0.0d; // TODO: compute if you have GPS/graph
-        double cost = 0.0d;       // TODO: compute pricing (e.g., base + per-minute)
+        
+        // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
+        double cost = billingService.calculateTripCost(userId, durationMinutes);
 
-        // create and save ride
+        // create and save ride (R-PRC-04: maintain log of all trips and charges)
         Rides ride = new Rides();
         ride.setUser(user);
+        ride.setBike(bike);
         ride.setStartLocation(startLocation);
         ride.setEndLocation(endLocation);
         ride.setStartTimestamp(startTs);
@@ -165,6 +163,23 @@ public class ReservationService {
         ride.setDistance(distanceKm);
         ride.setCost(cost);
         ridesRepo.save(ride);
+        
+        // Automatically charge payment if cost > 0 (no active subscription)
+        if (cost > 0) {
+            try {
+                paymentService.chargeForTrip(
+                    userId, 
+                    cost, 
+                    String.format("Bike trip #%d: %s to %s (%.1f minutes)", 
+                        ride.getRide_id(), startLocation, endLocation, durationMinutes)
+                );
+                System.out.println("💳 Charged $" + String.format("%.2f", cost) + " CAD for trip #" + ride.getRide_id());
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to charge for trip #" + ride.getRide_id() + ": " + e.getMessage());
+            }
+        } else {
+            System.out.println("✅ Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
+        }
 
         // reset bike
         bike.setBikeStatus(BikeStatus.available);
