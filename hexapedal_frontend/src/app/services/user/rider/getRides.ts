@@ -1,6 +1,62 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { Trip } from "@/types/Trip";
 
+/**
+ * Backend Rides model structure from the API
+ */
+interface BackendRide {
+  ride_id: number;
+  startLocation: string;
+  endLocation: string;
+  startTimestamp: string;
+  endTimestamp: string;
+  duration: number;
+  distance: number;
+  cost: number;
+  bike: {
+    id: number;
+  } | null;
+}
+
+/**
+ * Maps backend Rides model to frontend Trip interface
+ */
+function mapBackendRideToTrip(backendRide: BackendRide): Trip {
+  const hasEnded = backendRide.endTimestamp != null;
+  
+  // Generate simple numeric IDs from location strings (hash-based approach)
+  const startStationId = Math.abs(hashString(backendRide.startLocation));
+  const endStationId = hasEnded ? Math.abs(hashString(backendRide.endLocation)) : null;
+  
+  return {
+    id: backendRide.ride_id,
+    bikeId: backendRide.bike?.id,
+    userId: 0, // Not provided by backend, will be set from token
+    startStationId,
+    startStationName: backendRide.startLocation,
+    endStationId,
+    endStationName: hasEnded ? backendRide.endLocation : undefined,
+    startedAt: backendRide.startTimestamp,
+    endedAt: hasEnded ? backendRide.endTimestamp : null,
+    duration: backendRide.duration,
+    cost: backendRide.cost,
+    status: hasEnded ? "completed" : "active",
+  };
+}
+
+/**
+ * Simple string hash function to generate numeric IDs from location strings
+ */
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
+}
+
 export async function getRides(userId: number, token?: string | null): Promise<Trip[]> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -11,7 +67,7 @@ export async function getRides(userId: number, token?: string | null): Promise<T
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/api/trips?userId=${userId}`,
+    `${API_BASE_URL}/api/ride-history/me`,
     {
       method: "GET",
       headers,
@@ -23,7 +79,16 @@ export async function getRides(userId: number, token?: string | null): Promise<T
     throw new Error(errorText || "Failed to fetch rides");
   }
 
-  const data = await response.json();
-  return data;
+  const data: BackendRide[] = await response.json();
+  
+  // Map backend rides to frontend Trip format
+  const trips = data.map((ride) => {
+    const trip = mapBackendRideToTrip(ride);
+    // Set userId from parameter
+    trip.userId = userId;
+    return trip;
+  });
+  
+  return trips;
 }
 

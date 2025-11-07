@@ -190,7 +190,7 @@ export default function MyRidesView() {
                         Ride #{ride.id}
                       </h3>
                       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                        Bike #{ride.bikeId}
+                        {ride.bikeId ? `Bike #${ride.bikeId}` : "Bike information unavailable"}
                       </p>
                     </div>
                   </div>
