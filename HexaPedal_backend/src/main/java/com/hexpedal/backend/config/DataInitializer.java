@@ -37,7 +37,7 @@ public class DataInitializer implements CommandLineRunner {
                 .planType(PlanType.MONTHLY)
                 .name("Monthly Subscription")
                 .price(new BigDecimal("12.00"))
-                .stripePriceId("price_monthly_12cad") // TODO: Replace with actual Stripe Price ID
+                .stripePriceId("price_1SQd2A2QOR1PTnkYt1Lx3LjL")
                 .description("Unlimited rides for one month at $12 CAD/month")
                 .active(true)
                 .ratePerMinute(BigDecimal.ZERO) // Unlimited rides, no per-minute charge
@@ -48,7 +48,7 @@ public class DataInitializer implements CommandLineRunner {
                 .planType(PlanType.YEARLY)
                 .name("Yearly Subscription")
                 .price(new BigDecimal("100.00"))
-                .stripePriceId("price_yearly_100cad") // TODO: Replace with actual Stripe Price ID
+                .stripePriceId("price_1SQd1n2QOR1PTnkYIKC46uxy")
                 .description("Unlimited rides for one year at $100 CAD/year")
                 .active(true)
                 .ratePerMinute(BigDecimal.ZERO) // Unlimited rides, no per-minute charge
