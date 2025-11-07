@@ -37,7 +37,7 @@ public class SubscriptionPlan {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(name = "rate_per_km", precision = 10, scale = 2)
-    private BigDecimal ratePerKm;
+    @Column(name = "rate_per_minute", precision = 10, scale = 2)
+    private BigDecimal ratePerMinute;
 }
 

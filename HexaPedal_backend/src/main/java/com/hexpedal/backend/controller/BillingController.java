@@ -47,7 +47,7 @@ public class BillingController {
 
         String costBreakdown = billingService.generateCostBreakdown(
                 user.getId(),
-                ride.getDistance(),
+                ride.getDuration(),
                 ride.getCost()
         );
 

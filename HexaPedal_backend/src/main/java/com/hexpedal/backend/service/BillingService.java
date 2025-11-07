@@ -28,10 +28,10 @@ public class BillingService {
      * 
      * Rules:
      * - Active subscription (Monthly/Yearly): $0.00 per trip (unlimited rides)
-     * - No subscription (Pay-per-trip): $0.10 CAD per km
+     * - No subscription (Pay-per-trip): $0.01 CAD per minute
      */
     @Transactional
-    public double calculateTripCost(Long userId, double distanceKm) {
+    public double calculateTripCost(Long userId, double durationMinutes) {
         // Check if user has an active subscription
         Optional<UserSubscription> activeSubscription = 
                 userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
@@ -44,13 +44,13 @@ public class BillingService {
             }
         }
 
-        // Pay-per-trip calculation: $0.10 CAD per km
+        // Pay-per-trip calculation: $0.01 CAD per minute
         SubscriptionPlan payPerTripPlan = subscriptionPlanRepository.findByPlanType(PlanType.PAY_PER_TRIP)
                 .orElseThrow(() -> new RuntimeException("Pay-per-trip plan not configured"));
 
-        BigDecimal ratePerKm = payPerTripPlan.getRatePerKm();
-        BigDecimal distance = BigDecimal.valueOf(distanceKm);
-        BigDecimal cost = ratePerKm.multiply(distance).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal ratePerMinute = payPerTripPlan.getRatePerMinute();
+        BigDecimal duration = BigDecimal.valueOf(durationMinutes);
+        BigDecimal cost = ratePerMinute.multiply(duration).setScale(2, RoundingMode.HALF_UP);
 
         return cost.doubleValue();
     }
@@ -58,7 +58,7 @@ public class BillingService {
     /**
      * Generate a human-readable cost breakdown for a trip
      */
-    public String generateCostBreakdown(Long userId, double distanceKm, double cost) {
+    public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
         Optional<UserSubscription> activeSubscription = 
                 userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
 
@@ -72,7 +72,7 @@ public class BillingService {
         }
 
         // Pay-per-trip breakdown
-        return String.format("Pay-per-trip: %.2f km × $0.10/km = $%.2f CAD", distanceKm, cost);
+        return String.format("Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD", durationMinutes, cost);
     }
 
     /**

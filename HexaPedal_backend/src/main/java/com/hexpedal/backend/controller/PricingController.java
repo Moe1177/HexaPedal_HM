@@ -26,14 +26,14 @@ public class PricingController {
     }
 
     /**
-     * Estimate trip cost based on distance - public access
+     * Estimate trip cost based on duration - public access
      */
     @GetMapping("/calculate")
-    public ResponseEntity<CostEstimateDto> estimateCost(@RequestParam double distanceKm) {
-        if (distanceKm < 0) {
+    public ResponseEntity<CostEstimateDto> estimateCost(@RequestParam double durationMinutes) {
+        if (durationMinutes < 0) {
             return ResponseEntity.badRequest().build();
         }
-        CostEstimateDto estimate = pricingService.estimateTripCost(distanceKm);
+        CostEstimateDto estimate = pricingService.estimateTripCost(durationMinutes);
         return ResponseEntity.ok(estimate);
     }
 }

@@ -40,7 +40,7 @@ public class DataInitializer implements CommandLineRunner {
                 .stripePriceId("price_monthly_12cad") // TODO: Replace with actual Stripe Price ID
                 .description("Unlimited rides for one month at $12 CAD/month")
                 .active(true)
-                .ratePerKm(BigDecimal.ZERO) // Unlimited rides, no per-km charge
+                .ratePerMinute(BigDecimal.ZERO) // Unlimited rides, no per-minute charge
                 .build();
 
         // Yearly Subscription Plan
@@ -51,7 +51,7 @@ public class DataInitializer implements CommandLineRunner {
                 .stripePriceId("price_yearly_100cad") // TODO: Replace with actual Stripe Price ID
                 .description("Unlimited rides for one year at $100 CAD/year")
                 .active(true)
-                .ratePerKm(BigDecimal.ZERO) // Unlimited rides, no per-km charge
+                .ratePerMinute(BigDecimal.ZERO) // Unlimited rides, no per-minute charge
                 .build();
 
         // Pay-Per-Trip Plan
@@ -60,9 +60,9 @@ public class DataInitializer implements CommandLineRunner {
                 .name("Pay Per Trip")
                 .price(BigDecimal.ZERO) // No subscription fee
                 .stripePriceId(null) // Not a recurring subscription
-                .description("Pay as you go at $0.10 CAD per kilometer")
+                .description("Pay as you go at $0.01 CAD per minute")
                 .active(true)
-                .ratePerKm(new BigDecimal("0.10")) // $0.10 per km
+                .ratePerMinute(new BigDecimal("0.01")) // $0.01 per minute
                 .build();
 
         subscriptionPlanRepository.save(monthlyPlan);
