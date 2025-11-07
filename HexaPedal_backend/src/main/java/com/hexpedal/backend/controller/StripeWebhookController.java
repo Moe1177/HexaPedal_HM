@@ -48,6 +48,10 @@ public class StripeWebhookController {
 
         try {
             switch (event.getType()) {
+                case "checkout.session.completed":
+                    handleCheckoutSessionCompleted(event);
+                    break;
+                    
                 case "customer.subscription.created":
                 case "customer.subscription.updated":
                 case "customer.subscription.deleted":
@@ -77,6 +81,32 @@ public class StripeWebhookController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error processing webhook");
+        }
+    }
+
+    /**
+     * Handle successful checkout session completion
+     * This is triggered when user completes payment on Stripe Checkout page
+     */
+    private void handleCheckoutSessionCompleted(Event event) {
+        EventDataObjectDeserializer dataObjectDeserializer = event.getDataObjectDeserializer();
+        StripeObject stripeObject = null;
+
+        if (dataObjectDeserializer.getObject().isPresent()) {
+            stripeObject = dataObjectDeserializer.getObject().get();
+        } else {
+            System.err.println("Deserialization failed for checkout.session.completed");
+            return;
+        }
+
+        if (stripeObject instanceof com.stripe.model.checkout.Session) {
+            com.stripe.model.checkout.Session session = (com.stripe.model.checkout.Session) stripeObject;
+            System.out.println("✅ Checkout session completed: " + session.getId());
+            System.out.println("   Subscription ID: " + session.getSubscription());
+            
+            // The subscription is created automatically by Stripe
+            // We'll get a separate customer.subscription.created event
+            // that will save it to our database
         }
     }
 

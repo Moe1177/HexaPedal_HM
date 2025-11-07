@@ -24,7 +24,44 @@ public class SubscriptionController {
     private final UserSubscriptionRepository userSubscriptionRepository;
 
     /**
+     * Create Checkout Session for subscription - Rider only
+     * Returns a URL to redirect user to Stripe's hosted checkout page
+     * THIS IS THE RECOMMENDED METHOD FOR SUBSCRIPTIONS
+     */
+    @PostMapping("/create-checkout-session")
+    @PreAuthorize("hasRole('RIDER')")
+    public ResponseEntity<?> createCheckoutSession(
+            @AuthenticationPrincipal User user,
+            @RequestBody com.hexpedal.backend.dto.CheckoutSessionRequestDto request) {
+        
+        // Verify user is a Rider
+        if (!(user instanceof Rider)) {
+            return ResponseEntity.status(403).body("Only riders can subscribe to plans");
+        }
+
+        try {
+            String checkoutUrl = paymentService.createCheckoutSession(
+                    user.getId(),
+                    request.planType(),
+                    request.successUrl(),
+                    request.cancelUrl()
+            );
+            
+            return ResponseEntity.ok(new CheckoutSessionResponse(
+                    checkoutUrl,
+                    "Redirect user to this URL to complete subscription"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                    "Failed to create checkout session: " + e.getMessage()
+            );
+        }
+    }
+
+    /**
      * Subscribe to a plan - Rider only
+     * NOTE: This is for advanced/custom payment form usage
+     * For simple checkout flow, use /create-checkout-session instead
      */
     @PostMapping("/subscribe")
     @PreAuthorize("hasRole('RIDER')")
@@ -109,7 +146,8 @@ public class SubscriptionController {
         return ResponseEntity.ok(new SubscriptionStatusResponse(hasActive));
     }
 
-    // Simple response record
+    // Response records
     private record SubscriptionStatusResponse(boolean hasActiveSubscription) {}
+    private record CheckoutSessionResponse(String checkoutUrl, String message) {}
 }
 
