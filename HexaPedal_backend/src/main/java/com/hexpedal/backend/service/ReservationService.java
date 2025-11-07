@@ -6,8 +6,12 @@ import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
 import java.util.Objects;
+import java.time.ZoneId;
+import java.time.Instant;
 
 import java.time.Duration;
+
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
@@ -17,6 +21,7 @@ import com.hexpedal.backend.repository.BikeRepository;
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
+@AllArgsConstructor
 public class ReservationService {
     private static final int HOLD_MINUTES = 10; 
     private final UserRepository userRepo;
@@ -24,15 +29,8 @@ public class ReservationService {
     private final DockRepository dockRepo;
     private final DockingStationRepository dockstationRepo;
     private final RidesRepository ridesRepo;
-    
-
-    public ReservationService(UserRepository userRepo, BikeRepository bikeRepo, DockRepository dockRepo, DockingStationRepository dockstationRepo, RidesRepository ridesRepo) {
-        this.userRepo = userRepo;
-        this.bikeRepo = bikeRepo;
-        this.dockRepo = dockRepo;
-        this.dockstationRepo = dockstationRepo;
-        this.ridesRepo = ridesRepo;
-    }
+    private final BillingService billingService;
+    private final PaymentService paymentService; 
 
     public void reserveBike(String email, Integer bikeId) {
    
@@ -114,52 +112,79 @@ public class ReservationService {
     public void endTrip(Integer bikeId, Long userId, Long stationId){
         var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
                 .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
-        var station = dockstationRepo.findById(stationId)
-                .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
-        if (bike.getCurrentUser().getId() != userId) {
+
+        var user = userRepo.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        if (!Objects.equals(bike.getCurrentUser().getId(), userId)) {
             throw new IllegalStateException("Bike is on trip by another user.");
         }
+
+        var station = dockstationRepo.findById(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
+
         if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
             throw new IllegalStateException("No empty dock available at this station.");
         }
-    
+
         var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
                 .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
         emptyDock.setBike(bike);
         dockRepo.save(emptyDock);
+
+        // compute timings
+        LocalDateTime startTimeLdt = bike.getTripStartTime();
+        if (startTimeLdt == null) {
+            throw new IllegalStateException("Trip start time is missing on bike " + bikeId);
+        }
+        LocalDateTime endTimeLdt = LocalDateTime.now();
+
+        long seconds = java.time.Duration.between(startTimeLdt, endTimeLdt).getSeconds();
+        double durationMinutes = seconds / 60.0d;
+
+        Instant startTs = startTimeLdt.atZone(ZoneId.systemDefault()).toInstant();
+        Instant endTs   = endTimeLdt.atZone(ZoneId.systemDefault()).toInstant();
+
+        String startLocation = (bike.getTripStartStationName() != null) ? bike.getTripStartStationName() : "Unknown";
+        String endLocation = station.getName();
+        double distanceKm = 0.0d; // TODO: compute if you have GPS/graph
+        
+        // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
+        double cost = billingService.calculateTripCost(userId, durationMinutes);
+
+        // create and save ride (R-PRC-04: maintain log of all trips and charges)
+        Rides ride = new Rides();
+        ride.setUser(user);
+        ride.setBike(bike);
+        ride.setStartLocation(startLocation);
+        ride.setEndLocation(endLocation);
+        ride.setStartTimestamp(startTs);
+        ride.setEndTimestamp(endTs);
+        ride.setDuration(durationMinutes);
+        ride.setDistance(distanceKm);
+        ride.setCost(cost);
+        ridesRepo.save(ride);
+        
+        // Automatically charge payment if cost > 0 (no active subscription)
+        if (cost > 0) {
+            try {
+                paymentService.chargeForTrip(
+                    userId, 
+                    cost, 
+                    String.format("Bike trip #%d: %s to %s (%.1f minutes)", 
+                        ride.getRide_id(), startLocation, endLocation, durationMinutes)
+                );
+                System.out.println("💳 Charged $" + String.format("%.2f", cost) + " CAD for trip #" + ride.getRide_id());
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to charge for trip #" + ride.getRide_id() + ": " + e.getMessage());
+            }
+        } else {
+            System.out.println("✅ Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
+        }
+
+        // reset bike
         bike.setBikeStatus(BikeStatus.available);
         bike.setCurrentUser(null);
-        bikeRepo.save(bike);
-    
-    
-        LocalDateTime startTime = bike.getTripStartTime();
-        LocalDateTime endTime = LocalDateTime.now();
-    
-        float durationMinutes = 0f;
-        if (startTime != null) {
-            long seconds = Duration.between(startTime, endTime).getSeconds();
-            durationMinutes = seconds / 60.0f;
-        }
-    
-        String startLocation = bike.getTripStartStationName() != null
-                ? bike.getTripStartStationName()
-                : "Unknown";
-    
-        String endLocation = station.getName(); 
-    
-        float distanceKm = 0f; 
-    
-        Rides ride = new Rides(
-                userId.intValue(),   
-                startLocation,
-                endLocation,
-                durationMinutes,
-                distanceKm
-        );
-      
-        ridesRepo.save(ride);
-    
-     
         bike.setTripStartTime(null);
         bike.setTripStartStationName(null);
         bikeRepo.save(bike);

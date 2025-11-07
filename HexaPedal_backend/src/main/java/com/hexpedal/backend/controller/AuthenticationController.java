@@ -34,6 +34,8 @@ public class AuthenticationController {
             return ResponseEntity.ok(registerUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
