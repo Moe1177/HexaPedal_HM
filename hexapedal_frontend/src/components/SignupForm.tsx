@@ -476,27 +476,18 @@ function SignupFormInner() {
   );
 }
 
-export default function Signup() {
+export default function SignupForm() {
   if (!stripePromise) {
     return (
-      <main className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center justify-center p-6">
-        <div className="w-full rounded-lg border border-gray-800 bg-gray-950 p-6 shadow">
-          <div className="mx-auto mt-10 max-w-md rounded border border-red-700 bg-red-900/20 p-4 text-red-400">
-            <strong>Stripe configuration error.</strong> Check your NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-          </div>
-        </div>
-      </main>
+      <div className="mx-auto mt-10 max-w-md rounded border border-red-700 bg-red-900/20 p-4 text-red-400">
+        <strong>Stripe configuration error.</strong> Check your NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center justify-center p-6">
-      <div className="w-full rounded-lg border border-gray-800 bg-gray-950 p-6 shadow">
-        <h1 className="mb-4 text-center text-2xl font-semibold text-gray-100">Create your account</h1>
-        <Elements stripe={stripePromise}>
-          <SignupFormInner />
-        </Elements>
-      </div>
-    </main>
+    <Elements stripe={stripePromise}>
+      <SignupFormInner />
+    </Elements>
   );
 }

@@ -1,19 +1,22 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { login } from "@/app/services/authentication/authService";
-import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+type LoginResponse = {
+  token: string;
+  expiresIn: number;
+};
+
+export default function Login() {
   const router = useRouter();
-  const { setToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
   function validate(): string | null {
     if (!email.trim()) return "Email is required";
@@ -23,7 +26,7 @@ export default function LoginPage() {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMessage(null);
 
@@ -35,126 +38,105 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await login(email, password, setToken);
-      router.push("/dashboard/rider");
+      const res = await fetch(`${apiBaseUrl}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        let message = res.statusText || "Login failed";
+        try {
+          const data = await res.json();
+          if (typeof data === "string") message = data;
+          if (data && typeof data.message === "string") message = data.message;
+        } catch {}
+        throw new Error(message);
+      }
+
+      const data: LoginResponse = await res.json();
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", data.token);
+        const expiresAt = Date.now() + data.expiresIn * 1000;
+        localStorage.setItem("auth_token_expires_at", String(expiresAt));
+      }
+
+      router.push("/");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <Link href="/" className="inline-flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-sky-500">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-500 bg-clip-text text-transparent tracking-tight">
-              HexaPedal
-            </span>
-          </Link>
-          <h1 className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-neutral-900 to-neutral-700 dark:from-neutral-100 dark:to-neutral-300 bg-clip-text text-transparent">Welcome back</h1>
-          <p className="text-neutral-600 dark:text-neutral-400 text-lg">
-            Sign in to your account to continue
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-10 border border-neutral-100 dark:border-neutral-800">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
-                Email address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isSubmitting}
-                className="w-full px-5 py-3.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  className="w-full px-5 py-3.5 pr-12 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 dark:focus:border-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  disabled={isSubmitting}
-                  className="absolute inset-y-0 right-0 inline-flex items-center px-4 text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 disabled:opacity-50"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-            </div>
-
-            {errorMessage && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                  {errorMessage}
-                </p>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-indigo-600 border-neutral-300 rounded focus:ring-indigo-500"
-                />
-                <span className="text-sm text-neutral-700 dark:text-neutral-300">Remember me</span>
-              </label>
-              <Link
-                href="#"
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
+    <main className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center justify-center p-6">
+      <div className="w-full rounded-lg border border-gray-800 bg-gray-950 p-6 shadow">
+        <h1 className="mb-4 text-center text-2xl font-semibold text-gray-100">Sign in</h1>
+        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-sm space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-200">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-gray-100 outline-none ring-0 focus:border-gray-500"
+              placeholder="email@org.com"
               disabled={isSubmitting}
-              className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-sky-600 text-white rounded-xl hover:from-indigo-700 hover:to-sky-700 transition-all font-semibold shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:from-indigo-600 disabled:hover:to-sky-600"
-            >
-              {isSubmitting ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                Don't have an account?{" "}
-                <Link href="/signup" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
-                  Sign up
-                </Link>
-              </p>
+              required
+            />
           </div>
-        </div>
+
+          <div className="space-y-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-200">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 pr-12 text-gray-100 outline-none ring-0 focus:border-gray-500"
+                placeholder="••••••••"
+                disabled={isSubmitting}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 inline-flex items-center px-3 text-sm text-gray-300 hover:text-gray-100"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={isSubmitting}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+          </div>
+
+          {errorMessage ? (
+            <p className="text-sm text-red-400" role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
       </div>
-    </div>
+    </main>
   );
 }
