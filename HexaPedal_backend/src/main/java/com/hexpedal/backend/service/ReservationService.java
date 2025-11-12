@@ -23,7 +23,7 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 @AllArgsConstructor
 public class ReservationService {
-    private static final int HOLD_MINUTES = 10; 
+    //private static final int HOLD_MINUTES = 10;
     private final UserRepository userRepo;
     private final BikeRepository bikeRepo;
     private final DockRepository dockRepo;
@@ -31,6 +31,7 @@ public class ReservationService {
     private final RidesRepository ridesRepo;
     private final BillingService billingService;
     private final PaymentService paymentService;
+    private final LoyaltyService loyaltyService;
 
     public void reserveBike(String email, Integer bikeId) {
    
@@ -49,15 +50,18 @@ public class ReservationService {
 
         dockRepo.findByBike_Id(bike.getId()).orElseThrow(() -> new IllegalStateException("Bike must be docked to be reserved."));
 
+        int holdMinutes = loyaltyService.getReservationHoldMinutes(user.getId());
        
         bike.setBikeStatus(BikeStatus.reserved);
         bike.setCurrentUser(user);
-        LocalDateTime expiry = LocalDateTime.now().plusMinutes(HOLD_MINUTES);
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(holdMinutes);
         bike.setReservationExpDate(expiry.toLocalDate());
         bike.setReservationExpTime(expiry.toLocalTime());
 
         
         bikeRepo.save(bike);
+
+        loyaltyService.evaluateTier(user.getId());
     }
 
     public void cancelReservation(String email, Integer bikeId) {
@@ -147,7 +151,7 @@ public class ReservationService {
 
         String startLocation = (bike.getTripStartStationName() != null) ? bike.getTripStartStationName() : "Unknown";
         String endLocation = station.getName();
-        double distanceKm = 0.0d; // TODO: compute if you have GPS/graph
+        double distanceKm = 0.0d;
 
         // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
         double cost = billingService.calculateTripCost(userId, durationMinutes);
@@ -188,6 +192,7 @@ public class ReservationService {
         bike.setTripStartTime(null);
         bike.setTripStartStationName(null);
         bikeRepo.save(bike);
+        loyaltyService.evaluateTier(userId);
     }
     public void expireReservations(){
         var now = LocalDateTime.now();

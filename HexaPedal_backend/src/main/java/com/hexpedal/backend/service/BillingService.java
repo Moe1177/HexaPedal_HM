@@ -1,72 +1,65 @@
 package com.hexpedal.backend.service;
 
-import com.hexpedal.backend.model.PlanType;
 import com.hexpedal.backend.model.Rides;
-import com.hexpedal.backend.model.SubscriptionPlan;
-import com.hexpedal.backend.model.UserSubscription;
 import com.hexpedal.backend.repository.RidesRepository;
-import com.hexpedal.backend.repository.SubscriptionPlanRepository;
-import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class BillingService {
 
-    private final UserSubscriptionRepository userSubscriptionRepository;
-    private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final RidesRepository ridesRepository;
+    private final LoyaltyService loyaltyService;
 
+    // Base rate: $0.01 CAD per minute (R-PRC-02)
+    private static final BigDecimal BASE_RATE_PER_MINUTE = new BigDecimal("0.01");
 
     @Transactional
     public double calculateTripCost(Long userId, double durationMinutes) {
-        // Check if user has an active subscription
-        Optional<UserSubscription> activeSubscription =
-                userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
-
-        if (activeSubscription.isPresent()) {
-            PlanType planType = activeSubscription.get().getPlan().getPlanType();
-            // Monthly and Yearly subscriptions get unlimited rides at no cost per trip
-            if (planType == PlanType.MONTHLY || planType == PlanType.YEARLY) {
-                return 0.00;
-            }
-        }
-
-        // Pay-per-trip calculation: $0.50 minimum + $0.01 per minute
-        BigDecimal baseCharge = new BigDecimal("0.50");
-        BigDecimal perMinute = new BigDecimal("0.01");
+        // Calculate base cost
         BigDecimal duration = BigDecimal.valueOf(durationMinutes);
+        BigDecimal baseCost = BASE_RATE_PER_MINUTE.multiply(duration)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal cost = baseCharge.add(perMinute.multiply(duration)).setScale(2, RoundingMode.HALF_UP);
+        // Apply loyalty discount
+        double finalCost = loyaltyService.applyDiscount(userId, baseCost.doubleValue());
 
-        return cost.doubleValue();
+        return finalCost;
     }
-
-
 
     public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
-        Optional<UserSubscription> activeSubscription = 
-                userSubscriptionRepository.findActiveSubscriptionByUserId(userId);
+        BigDecimal duration = BigDecimal.valueOf(durationMinutes);
+        BigDecimal baseCost = BASE_RATE_PER_MINUTE.multiply(duration)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        if (activeSubscription.isPresent()) {
-            PlanType planType = activeSubscription.get().getPlan().getPlanType();
-            if (planType == PlanType.MONTHLY) {
-                return "Monthly Subscription: Unlimited rides included - $0.00";
-            } else if (planType == PlanType.YEARLY) {
-                return "Yearly Subscription: Unlimited rides included - $0.00";
-            }
+        double discountPercentage = loyaltyService.getOrCreateLoyalty(
+                createRiderProxy(userId)
+        ).getDiscountPercentage();
+
+        if (discountPercentage > 0) {
+            return String.format(
+                    "Base: %.1f minutes × $0.01/minute = $%.2f CAD\n" +
+                            "Loyalty discount (%.0f%%): -$%.2f CAD\n" +
+                            "Final cost: $%.2f CAD",
+                    durationMinutes,
+                    baseCost.doubleValue(),
+                    discountPercentage * 100,
+                    baseCost.doubleValue() - cost,
+                    cost
+            );
         }
 
-        // Pay-per-trip breakdown
-        return String.format("Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD", durationMinutes, cost);
+        return String.format(
+                "Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD",
+                durationMinutes,
+                cost
+        );
     }
-
 
     @Transactional
     public void updateRideCost(Integer rideId, double cost) {
@@ -75,5 +68,10 @@ public class BillingService {
         ride.setCost(cost);
         ridesRepository.save(ride);
     }
-}
 
+    private com.hexpedal.backend.model.Rider createRiderProxy(Long userId) {
+        com.hexpedal.backend.model.Rider rider = new com.hexpedal.backend.model.Rider();
+        rider.setId(userId);
+        return rider;
+    }
+}

@@ -2,6 +2,7 @@ package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.dto.CostEstimateDto;
 import com.hexpedal.backend.dto.PricingPlanDto;
+import com.hexpedal.backend.model.LoyaltyTier;
 import com.hexpedal.backend.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,19 +17,50 @@ public class PricingController {
 
     private final PricingService pricingService;
 
-    @GetMapping("/plans")
-    public ResponseEntity<List<PricingPlanDto>> getAllPricingPlans() {
-        List<PricingPlanDto> plans = pricingService.getAllActivePricingPlans();
-        return ResponseEntity.ok(plans);
+    @GetMapping("/tiers")
+    public ResponseEntity<List<PricingService.LoyaltyTierInfo>> getAllTiers() {
+        List<PricingService.LoyaltyTierInfo> tiers = pricingService.getAllTiers();
+        return ResponseEntity.ok(tiers);
     }
 
     @GetMapping("/calculate")
-    public ResponseEntity<CostEstimateDto> estimateCost(@RequestParam double durationMinutes) {
+    public ResponseEntity<CostEstimateDto> estimateCost(
+            @RequestParam double durationMinutes,
+            @RequestParam(required = false) String tier) {
+
         if (durationMinutes < 0) {
             return ResponseEntity.badRequest().build();
         }
-        CostEstimateDto estimate = pricingService.estimateTripCost(durationMinutes);
+
+        LoyaltyTier loyaltyTier = LoyaltyTier.NONE;
+        if (tier != null) {
+            try {
+                loyaltyTier = LoyaltyTier.valueOf(tier.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Invalid tier, use NONE
+            }
+        }
+
+        CostEstimateDto estimate = pricingService.estimateTripCostWithTier(
+                durationMinutes,
+                loyaltyTier
+        );
         return ResponseEntity.ok(estimate);
     }
+
+    @GetMapping("/base-rate")
+    public ResponseEntity<?> getBaseRate() {
+        return ResponseEntity.ok(new BaseRateResponse(
+                0.01,
+                "CAD",
+                "per minute"
+        ));
+    }
+
+    private record BaseRateResponse(
+            double rate,
+            String currency,
+            String unit
+    ) {}
 }
 
