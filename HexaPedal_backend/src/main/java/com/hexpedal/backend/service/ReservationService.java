@@ -154,7 +154,7 @@ public class ReservationService {
         double distanceKm = 0.0d;
 
         // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
-        double cost = billingService.calculateTripCost(userId, durationMinutes);
+        double cost = 0.50 + billingService.calculateTripCost(userId, durationMinutes);
 
         // create and save ride (R-PRC-04: maintain log of all trips and charges)
         Rides ride = new Rides();
