@@ -1,5 +1,6 @@
 package com.hexpedal.backend.service;
 
+import com.hexpedal.backend.model.BikePricingPlan;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.repository.RidesRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,49 +17,51 @@ public class BillingService {
     private final RidesRepository ridesRepository;
     private final LoyaltyService loyaltyService;
 
-    // Base rate: $0.01 CAD per minute (R-PRC-02)
     private static final BigDecimal BASE_RATE_PER_MINUTE = new BigDecimal("0.01");
 
     @Transactional
-    public double calculateTripCost(Long userId, double durationMinutes) {
-        // Calculate base cost
-        BigDecimal duration = BigDecimal.valueOf(durationMinutes);
-        BigDecimal baseCost = BASE_RATE_PER_MINUTE.multiply(duration)
+    public double calculateTripCost(Long userId, String bikeType, double durationMinutes) {
+        BikePricingPlan plan = BikePricingPlan.fromBikeType(bikeType);
+        BigDecimal totalCost = plan.calculateCost(durationMinutes)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Apply loyalty discount
-        double finalCost = loyaltyService.applyDiscount(userId, baseCost.doubleValue());
+
+
+        double finalCost = loyaltyService.applyDiscount(userId, totalCost.doubleValue());
 
         return finalCost;
     }
 
-    public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
+    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double finalCost) {
+        BikePricingPlan plan = BikePricingPlan.fromBikeType(bikeType);
+
+        BigDecimal baseFee = plan.getBaseFee();
+        BigDecimal ratePerMinute = plan.getRatePerMinute();
         BigDecimal duration = BigDecimal.valueOf(durationMinutes);
-        BigDecimal baseCost = BASE_RATE_PER_MINUTE.multiply(duration)
-                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal timeCost = ratePerMinute.multiply(duration).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalBeforeDiscount = baseFee.add(timeCost);
 
         double discountPercentage = loyaltyService.getOrCreateLoyalty(
                 createRiderProxy(userId)
         ).getDiscountPercentage();
 
+        StringBuilder breakdown = new StringBuilder();
+        breakdown.append(String.format("Bike Type: %s\n", plan.getBikeType()));
+        breakdown.append(String.format("Base Fee: $%.2f CAD\n", baseFee));
+        breakdown.append(String.format("Time: %.1f minutes × $%.2f/minute = $%.2f CAD\n",
+                durationMinutes, ratePerMinute, timeCost));
+        breakdown.append(String.format("Subtotal: $%.2f CAD\n", totalBeforeDiscount));
+
         if (discountPercentage > 0) {
-            return String.format(
-                    "Base: %.1f minutes × $0.01/minute = $%.2f CAD\n" +
-                            "Loyalty discount (%.0f%%): -$%.2f CAD\n" +
-                            "Final cost: $%.2f CAD",
-                    durationMinutes,
-                    baseCost.doubleValue(),
-                    discountPercentage * 100,
-                    baseCost.doubleValue() - cost,
-                    cost
-            );
+            BigDecimal discountAmount = totalBeforeDiscount.subtract(BigDecimal.valueOf(finalCost))
+                    .setScale(2, RoundingMode.HALF_UP);
+            breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
+                    discountPercentage * 100, discountAmount));
         }
 
-        return String.format(
-                "Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD",
-                durationMinutes,
-                cost
-        );
+        breakdown.append(String.format("Final cost: $%.2f CAD", finalCost));
+
+        return breakdown.toString();
     }
 
     @Transactional
