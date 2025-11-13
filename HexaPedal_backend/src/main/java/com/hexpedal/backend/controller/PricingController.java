@@ -1,7 +1,6 @@
 package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.dto.CostEstimateDto;
-import com.hexpedal.backend.dto.PricingPlanDto;
 import com.hexpedal.backend.model.LoyaltyTier;
 import com.hexpedal.backend.service.PricingService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +16,12 @@ public class PricingController {
 
     private final PricingService pricingService;
 
+    @GetMapping("/plans")
+    public ResponseEntity<List<PricingService.PricingPlanInfo>> getAllPricingPlans() {
+        List<PricingService.PricingPlanInfo> plans = pricingService.getAllPricingPlans();
+        return ResponseEntity.ok(plans);
+    }
+
     @GetMapping("/tiers")
     public ResponseEntity<List<PricingService.LoyaltyTierInfo>> getAllTiers() {
         List<PricingService.LoyaltyTierInfo> tiers = pricingService.getAllTiers();
@@ -25,6 +30,7 @@ public class PricingController {
 
     @GetMapping("/calculate")
     public ResponseEntity<CostEstimateDto> estimateCost(
+            @RequestParam String bikeType,
             @RequestParam double durationMinutes,
             @RequestParam(required = false) String tier) {
 
@@ -42,25 +48,24 @@ public class PricingController {
         }
 
         CostEstimateDto estimate = pricingService.estimateTripCostWithTier(
+                bikeType,
                 durationMinutes,
                 loyaltyTier
         );
         return ResponseEntity.ok(estimate);
     }
 
-    @GetMapping("/base-rate")
-    public ResponseEntity<?> getBaseRate() {
-        return ResponseEntity.ok(new BaseRateResponse(
-                0.01,
-                "CAD",
-                "per minute"
-        ));
+    @GetMapping("/plans/{bikeType}")
+    public ResponseEntity<?> getPlanDetails(@PathVariable String bikeType) {
+        var plans = pricingService.getAllPricingPlans();
+        var plan = plans.stream()
+                .filter(p -> p.bikeType().equalsIgnoreCase(bikeType))
+                .findFirst();
+
+        if (plan.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(plan.get());
     }
-
-    private record BaseRateResponse(
-            double rate,
-            String currency,
-            String unit
-    ) {}
 }
-
