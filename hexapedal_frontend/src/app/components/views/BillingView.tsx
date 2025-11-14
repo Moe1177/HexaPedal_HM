@@ -50,9 +50,11 @@ export default function BillingView() {
       setSubscription(sub);
 
       // Try to load billing info if available
-      if (userId) {
+      if (true) {
         try {
-          const data = await getBillingInfo(userId, token);
+          console.log(token)
+          const data = await getBillingInfo(token);
+          console.log(data)
           setBillingInfo(data);
         } catch (err) {
           console.error("Failed to load billing info:", err);
@@ -319,7 +321,7 @@ export default function BillingView() {
               Total Spent
             </p>
             <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-              ${billingInfo?.totalSpent.toFixed(2) || "0.00"}
+              ${(billingInfo?.totalSpent ?? 0).toFixed(2)}
             </p>
             <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
               All time

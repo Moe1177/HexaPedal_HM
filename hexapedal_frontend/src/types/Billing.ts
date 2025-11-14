@@ -24,7 +24,7 @@ export interface BillingHistory {
 }
 
 export interface BillingSummary {
-  currentPlan: UserPlan;
+  currentPlan: UserPlan | null;
   totalSpent: number;
   ridesThisMonth: number;
   ridesThisYear: number;
