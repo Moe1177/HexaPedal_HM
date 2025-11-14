@@ -4,24 +4,13 @@ import { useState, useEffect } from "react";
 import { Trip } from "@/types/Trip";
 import { getRides } from "@/app/services/user/rider/getRides";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserIdFromToken } from "@/app/services/user/getCurrentUser";
 
 export default function MyRidesView() {
   const { token } = useAuth();
-  const [userId, setUserId] = useState<number | null>(null);
   const [rides, setRides] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "completed" | "active" | "cancelled">("all");
-
-  useEffect(() => {
-    if (token) {
-      const id = getUserIdFromToken(token);
-      setUserId(id);
-    } else {
-      setIsLoading(false);
-    }
-  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -29,20 +18,11 @@ export default function MyRidesView() {
       return;
     }
 
-    if (userId) {
-      loadRides();
-    } else {
-      // If token exists but userId is null, wait briefly then show empty state
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-        setRides([]);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [userId, token]);
+    loadRides();
+  }, [token]);
 
   const loadRides = async () => {
-    if (!userId || !token) {
+    if (!token) {
       setIsLoading(false);
       setRides([]);
       return;
@@ -51,7 +31,9 @@ export default function MyRidesView() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getRides(userId, token);
+      // getRides now uses /api/ride-history/me which is token-based
+      // userId parameter is optional and not used in the API call
+      const data = await getRides(null, token);
       setRides(data || []);
     } catch (err) {
       // If API doesn't exist yet, show empty state

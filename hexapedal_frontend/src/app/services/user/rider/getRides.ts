@@ -57,14 +57,15 @@ function hashString(str: string): number {
   return hash;
 }
 
-export async function getRides(userId: number, token?: string | null): Promise<Trip[]> {
+export async function getRides(userId: number | null, token?: string | null): Promise<Trip[]> {
+  if (!token) {
+    throw new Error("Token is required");
+  }
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
   };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
 
   const response = await fetch(
     `${API_BASE_URL}/api/ride-history/me`,
@@ -84,8 +85,8 @@ export async function getRides(userId: number, token?: string | null): Promise<T
   // Map backend rides to frontend Trip format
   const trips = data.map((ride) => {
     const trip = mapBackendRideToTrip(ride);
-    // Set userId from parameter
-    trip.userId = userId;
+    // Set userId from parameter if provided, otherwise use 0 as placeholder
+    trip.userId = userId ?? 0;
     return trip;
   });
   
