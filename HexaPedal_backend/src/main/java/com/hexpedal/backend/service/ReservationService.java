@@ -1,6 +1,8 @@
 package com.hexpedal.backend.service;
 
 import java.time.LocalDateTime;
+
+import com.hexpedal.backend.model.Rider;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.RidesRepository;
@@ -32,6 +34,7 @@ public class ReservationService {
     private final BillingService billingService;
     private final PaymentService paymentService;
     private final LoyaltyService loyaltyService;
+    private final FlexDollarService flexdollarservice;
 
     public void reserveBike(String email, Integer bikeId) {
    
@@ -193,6 +196,10 @@ public class ReservationService {
         bike.setTripStartStationName(null);
         bikeRepo.save(bike);
         loyaltyService.evaluateTier(userId);
+
+        if(station.getNumberOfBikesDocked() < station.getBikeCapacity()*0.25){
+            flexdollarservice.addFlexDollars(user, 5);
+        }
     }
     public void expireReservations(){
         var now = LocalDateTime.now();

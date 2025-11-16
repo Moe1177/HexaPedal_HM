@@ -55,6 +55,9 @@ public class User implements UserDetails {
     @Column(name = "stripe_customer_id", unique = true)
     private String stripeCustomerId;
 
+    @Column(name = "flex_dollars", nullable = false)
+    private Integer flexDollars = 0;
+
     public User(String fullName, String address, String username, String email, String password) {
         this.fullName = fullName;
         this.address = address;
@@ -102,5 +105,12 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    @Transient
+    public String getRole() {
+        return this.getClass().getAnnotation(DiscriminatorValue.class) != null
+                ? this.getClass().getAnnotation(DiscriminatorValue.class).value()
+                : "USER";
     }
 }
