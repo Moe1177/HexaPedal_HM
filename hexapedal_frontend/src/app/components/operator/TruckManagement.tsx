@@ -359,7 +359,7 @@ export default function TruckManagement({ onTruckChange }: TruckManagementProps)
                 {getLoadableBikes().length === 0 ? (
                   <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                     <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                      No available bikes to load. Bikes must be available and docked at a station.
+                      No available bikes to load. Bikes must be available and not already on another truck.
                     </p>
                   </div>
                 ) : (

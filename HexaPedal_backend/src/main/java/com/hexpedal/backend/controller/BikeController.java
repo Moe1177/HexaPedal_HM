@@ -13,6 +13,7 @@ import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
 import org.springframework.web.bind.annotation.RequestMapping;
 import com.hexpedal.backend.service.BikeService;
+import com.hexpedal.backend.service.TruckService;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,11 +25,13 @@ public class BikeController {
     private final BikeRepository bikeRepo;
     private final BikeService bikeService;
     private final DockRepository dockRepo;
+    private final TruckService truckService;
 
-    public BikeController(BikeRepository bikeRepo , BikeService bikeService, DockRepository dockRepo) {
+    public BikeController(BikeRepository bikeRepo , BikeService bikeService, DockRepository dockRepo, TruckService truckService) {
         this.bikeRepo = bikeRepo;
         this.bikeService = bikeService;
         this.dockRepo = dockRepo;
+        this.truckService = truckService;
     }
     @PostMapping
     public ResponseEntity<Bike> createBike(@RequestBody Bike bike) {
@@ -40,7 +43,12 @@ public class BikeController {
 
     @GetMapping
     public ResponseEntity<?> getAllBikes() {
+
+        truckService.ensureBikesOnTrucksHaveMaintenanceStatus();
+        
         List<Bike> bikes = bikeRepo.findAll();
+        
+
         for (Bike bike : bikes) {
             dockRepo.findByBike_Id(bike.getId()).ifPresent(dock -> {
                 if (dock.getStation() != null) {

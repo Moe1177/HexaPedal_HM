@@ -27,7 +27,25 @@ public class TruckService {
     private final DockRepository dockRepository;
     private final DockingStationRepository stationRepository;
 
+    @Transactional
+    public void ensureBikesOnTrucksHaveMaintenanceStatus() {
+        List<Truck> trucks = truckRepository.findAll();
+        
+        for (Truck truck : trucks) {
+            for (Bike bike : truck.getBikes()) {
+                if (bike.getBikeStatus() != BikeStatus.maintenance) {
+                    Bike managedBike = bikeRepository.findById(bike.getId())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bike not found: " + bike.getId()));
+                    managedBike.setBikeStatus(BikeStatus.maintenance);
+                    bikeRepository.save(managedBike);
+                }
+            }
+        }
+    }
+
     public List<Truck> getAllTrucks() {
+        ensureBikesOnTrucksHaveMaintenanceStatus();
+        
         return truckRepository.findAll();
     }
 
@@ -60,21 +78,23 @@ public class TruckService {
         Bike bike = bikeRepository.findById(bikeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Bike not found: " + bikeId));
-
-        Dock dock = dockRepository.findByBike_Id(bikeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Bike " + bikeId + " is not currently docked in a station."));
-
-        if (bike.getBikeStatus() != BikeStatus.available) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Bike " + bikeId + " is not available for loading. Current status: " + bike.getBikeStatus());
+        List<Truck> allTrucks = truckRepository.findAll();
+        for (Truck otherTruck : allTrucks) {
+            if (!otherTruck.getId().equals(truckId) && 
+                otherTruck.getBikes().stream().anyMatch(b -> b.getId() == bikeId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Bike " + bikeId + " is already on truck " + otherTruck.getId());
+            }
         }
 
-        dock.setBike(null);
-        dockRepository.save(dock);
+        dockRepository.findByBike_Id(bikeId).ifPresent(dock -> {
+            dock.setBike(null);
+            dockRepository.save(dock);
+        });
         bike.setBikeStatus(BikeStatus.maintenance);
-        bikeRepository.save(bike);
-        truck.loadBike(bike);
+        Bike savedBike = bikeRepository.save(bike);
+        
+        truck.loadBike(savedBike);
 
         return truckRepository.save(truck);
     }
