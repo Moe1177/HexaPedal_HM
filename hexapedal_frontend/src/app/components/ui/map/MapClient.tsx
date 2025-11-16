@@ -10,16 +10,28 @@ import StationDetailsModal from '../StationDetailsModal';
 
 interface MapClientProps {
     onBikeReserved?: (bikeId: number) => void;
+    isOperatorView?: boolean;
+    onEditState?: (stationId: number) => void;
+    onEditPosition?: (stationId: number) => void;
+    onDelete?: (stationId: number) => void;
 }
 
-export default function MapClient({ onBikeReserved }: MapClientProps = {}) {
+export default function MapClient({ 
+    onBikeReserved,
+    isOperatorView = false,
+    onEditState,
+    onEditPosition,
+    onDelete
+}: MapClientProps = {}) {
     const { entities } = useMapEntities();
     const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleStationClick = (stationId: number) => {
-        setSelectedStationId(stationId);
-        setIsModalOpen(true);
+        if (!isOperatorView) {
+            setSelectedStationId(stationId);
+            setIsModalOpen(true);
+        }
     };
 
     const handleCloseModal = () => {
@@ -47,15 +59,21 @@ export default function MapClient({ onBikeReserved }: MapClientProps = {}) {
                         key={entity.id}
                         entity={entity}
                         onStationClick={handleStationClick}
+                        isOperatorView={isOperatorView}
+                        onEditState={onEditState}
+                        onEditPosition={onEditPosition}
+                        onDelete={onDelete}
                     />
                 ))}
             </MapContainer>
-            <StationDetailsModal
-                stationId={selectedStationId}
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-                onReserveBike={handleReserveBike}
-            />
+            {!isOperatorView && (
+                <StationDetailsModal
+                    stationId={selectedStationId}
+                    isOpen={isModalOpen}
+                    onClose={handleCloseModal}
+                    onReserveBike={handleReserveBike}
+                />
+            )}
         </>
     );
 }

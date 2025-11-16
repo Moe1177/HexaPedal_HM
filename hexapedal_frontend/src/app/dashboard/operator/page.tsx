@@ -1,8 +1,39 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import MapView from "@/app/components/views/MapView";
+import StationManagement from "@/app/components/operator/StationManagement";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
+import { useMapEntities } from "@/hooks/useMapEntities";
+import { DockingStation } from "@/types/DockingStation";
 
-export default function OperatorDashboard() {
+function OperatorDashboardContent() {
+  const [activeView, setActiveView] = useState<"map" | "stations">("map");
+  const { reloadEntities } = useMapEntities();
+  const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
+
+  const handleStationChange = () => {
+    // Reload map entities when stations are modified
+    reloadEntities();
+  };
+
+  const handleEditState = (stationId: number) => {
+    // Switch to stations view and trigger edit
+    setActiveView("stations");
+    // The actual edit will be handled by the StationManagement component
+  };
+
+  const handleEditPosition = (stationId: number) => {
+    // Switch to stations view and trigger edit
+    setActiveView("stations");
+  };
+
+  const handleDelete = (stationId: number) => {
+    // Switch to stations view and trigger delete
+    setActiveView("stations");
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <nav className="bg-white/70 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/60 dark:border-neutral-800 shadow-sm">
@@ -60,9 +91,13 @@ export default function OperatorDashboard() {
       <div className="flex h-[calc(100vh-73px)]">
         <aside className="w-64 bg-white/50 dark:bg-neutral-900/40 backdrop-blur-sm border-r border-neutral-200/60 dark:border-neutral-800 p-6">
           <nav className="space-y-2">
-            <Link
-              href="/operator"
-              className="flex items-center gap-3 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-lg font-medium"
+            <button
+              onClick={() => setActiveView("map")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeView === "map"
+                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
             >
               <svg
                 className="w-5 h-5"
@@ -78,7 +113,30 @@ export default function OperatorDashboard() {
                 />
               </svg>
               <span>Map View</span>
-            </Link>
+            </button>
+            <button
+              onClick={() => setActiveView("stations")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeView === "stations"
+                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              <span>Station Management</span>
+            </button>
             <Link
               href="#"
               className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -145,75 +203,57 @@ export default function OperatorDashboard() {
           </nav>
         </aside>
 
-        <main className="flex-1 relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-indigo-100 dark:from-neutral-900 dark:to-neutral-950">
-            <MapEntitiesProvider>
-              <MapView />
-            </MapEntitiesProvider>
+        <main className="flex-1 relative overflow-hidden">
+          {activeView === "map" ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-indigo-100 dark:from-neutral-900 dark:to-neutral-950">
+              <MapView 
+                isOperatorView={true}
+                onEditState={handleEditState}
+                onEditPosition={handleEditPosition}
+                onDelete={handleDelete}
+              />
 
-            <div className="absolute top-4 right-4 z-[1000]">
-              <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl rounded-2xl shadow-xl p-5 border border-neutral-200/60 dark:border-neutral-800">
-                <h4 className="font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
-                  Map Controls
-                </h4>
-                <div className="space-y-2">
-                  <button className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                    Show All Bikes
-                  </button>
-                  <button className="w-full px-4 py-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors text-sm font-medium">
-                    Show Stations
-                  </button>
-                  <button className="w-full px-4 py-2 bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-lg hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors text-sm font-medium">
-                    Filter by Status
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute top-4 left-4 z-[1000]">
-              <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg p-4 border border-neutral-200 dark:border-neutral-800 min-w-[200px]">
-                <h4 className="font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
-                  Quick Stats
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                      Total Bikes
-                    </span>
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                      247
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                      In Use
-                    </span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      89
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                      Available
-                    </span>
-                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                      158
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                      Stations
-                    </span>
-                    <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                      32
-                    </span>
+              <div className="absolute top-4 right-4 z-[1000]">
+                <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl rounded-2xl shadow-xl p-5 border border-neutral-200/60 dark:border-neutral-800">
+                  <h4 className="font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
+                    Map Legend
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                      <span className="text-neutral-700 dark:text-neutral-300">Active</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-sky-500"></div>
+                      <span className="text-neutral-700 dark:text-neutral-300">Full</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-neutral-500"></div>
+                      <span className="text-neutral-700 dark:text-neutral-300">Empty</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-neutral-700 dark:text-neutral-300">Out of Service</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
+              <StationManagement onStationChange={handleStationChange} />
+            </div>
+          )}
         </main>
       </div>
     </div>
+  );
+}
+
+export default function OperatorDashboard() {
+  return (
+    <MapEntitiesProvider>
+      <OperatorDashboardContent />
+    </MapEntitiesProvider>
   );
 }
