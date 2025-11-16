@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import MapView from "@/app/components/views/MapView";
 import StationManagement from "@/app/components/operator/StationManagement";
+import BikeManagement from "@/app/components/operator/BikeManagement";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 import { useMapEntities } from "@/hooks/useMapEntities";
 import { DockingStation } from "@/types/DockingStation";
 
 function OperatorDashboardContent() {
-  const [activeView, setActiveView] = useState<"map" | "stations">("map");
+  const [activeView, setActiveView] = useState<"map" | "stations" | "bikes">("map");
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
 
@@ -144,9 +145,13 @@ function OperatorDashboardContent() {
               </svg>
               <span>Station Management</span>
             </button>
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+            <button
+              onClick={() => setActiveView("bikes")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeView === "bikes"
+                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
             >
               <svg
                 className="w-5 h-5"
@@ -162,7 +167,7 @@ function OperatorDashboardContent() {
                 />
               </svg>
               <span>Bike Management</span>
-            </Link>
+            </button>
             <Link
               href="#"
               className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -212,7 +217,7 @@ function OperatorDashboardContent() {
 
         <main className="flex-1 relative overflow-hidden">
           {activeView === "map" ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-indigo-100 dark:from-neutral-900 dark:to-neutral-950">
+            <div key="map-view" className="absolute inset-0 bg-gradient-to-br from-sky-100 to-indigo-100 dark:from-neutral-900 dark:to-neutral-950">
               <MapView 
                 isOperatorView={true}
                 onEditState={handleEditState}
@@ -246,9 +251,13 @@ function OperatorDashboardContent() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
+          ) : activeView === "stations" ? (
+            <div key="stations-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
               <StationManagement onStationChange={handleStationChange} />
+            </div>
+          ) : (
+            <div key="bikes-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
+              <BikeManagement onBikeChange={handleStationChange} />
             </div>
           )}
         </main>
