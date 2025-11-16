@@ -45,10 +45,13 @@ public class Rides {
     private double duration;
 
     @Column(name = "distance", nullable = false)
-    private double distance; 
+    private double distance;
 
     @Column(name = "cost", nullable = false)
     private double cost;
+
+    @Column(name = "flex_dollars_used")
+    private Integer flexDollarsUsed = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bike_id")

@@ -12,7 +12,8 @@ public record BillingHistoryDto(
         String arrivalStation,
         double distance,
         double duration,
-        double cost
+        double cost,
+        Integer flexDollarsUsed
 ) {
     public static BillingHistoryDto from(Rides ride) {
         return new BillingHistoryDto(
@@ -23,8 +24,8 @@ public record BillingHistoryDto(
                 ride.getEndLocation(),
                 ride.getDistance(),
                 ride.getDuration(),
-                ride.getCost()
+                ride.getCost(),
+                ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0
         );
     }
 }
-

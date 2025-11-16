@@ -2,16 +2,14 @@ package com.hexpedal.backend.service;
 
 import java.time.LocalDateTime;
 
-import com.hexpedal.backend.model.Rider;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
+import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import java.util.Objects;
 import java.time.ZoneId;
 import java.time.Instant;
-
-import java.time.Duration;
 
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,9 +33,10 @@ public class ReservationService {
     private final PaymentService paymentService;
     private final LoyaltyService loyaltyService;
     private final FlexDollarService flexdollarservice;
+    private final UserSubscriptionRepository userSubscriptionRepository;
 
     public void reserveBike(String email, Integer bikeId) {
-   
+
         var user = userRepo.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
 
 
@@ -54,14 +53,14 @@ public class ReservationService {
         dockRepo.findByBike_Id(bike.getId()).orElseThrow(() -> new IllegalStateException("Bike must be docked to be reserved."));
 
         int holdMinutes = loyaltyService.getReservationHoldMinutes(user.getId());
-       
+
         bike.setBikeStatus(BikeStatus.reserved);
         bike.setCurrentUser(user);
         LocalDateTime expiry = LocalDateTime.now().plusMinutes(holdMinutes);
         bike.setReservationExpDate(expiry.toLocalDate());
         bike.setReservationExpTime(expiry.toLocalTime());
 
-        
+
         bikeRepo.save(bike);
 
         loyaltyService.evaluateTier(user.getId());
@@ -69,51 +68,51 @@ public class ReservationService {
 
     public void cancelReservation(String email, Integer bikeId) {
         var user = userRepo.findByEmail(email)
-            .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
-    
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+
         var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved)
-            .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
-    
+                .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
+
         if (!Objects.equals(bike.getCurrentUser().getId(), user.getId())) {
             throw new IllegalStateException("Bike is reserved by another user.");
         }
-    
+
         bike.setBikeStatus(BikeStatus.available);
         bike.setCurrentUser(null);
         bike.setReservationExpDate(null);
         bike.setReservationExpTime(null);
-    
+
         bikeRepo.save(bike);
     }
-    
+
 
     public void startTrip(Integer bikeId, String email){
         var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved)
                 .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
-       
+
         if (!Objects.equals(bike.getCurrentUser().getEmail(), email)) {
-                    throw new IllegalStateException("Bike is reserved by another user.");
-                }
-    
+            throw new IllegalStateException("Bike is reserved by another user.");
+        }
+
         var dock = dockRepo.findByBike_Id(bikeId)
                 .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
-    
-        Long stationId = dock.getStation().getId(); 
+
+        Long stationId = dock.getStation().getId();
         var station = dockstationRepo.findById(stationId)
-                        .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
-            
+                .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
+
         String startStationName = station.getName();
-    
+
         dock.setBike(null);
         dockRepo.save(dock);
-    
+
         bike.setBikeStatus(BikeStatus.on_trip);
         bike.setReservationExpDate(null);
         bike.setReservationExpTime(null);
 
         bike.setTripStartTime(LocalDateTime.now());
         bike.setTripStartStationName(startStationName);
-    
+
         bikeRepo.save(bike);
     }
     public void endTrip(Integer bikeId, Long userId, Long stationId){
@@ -159,6 +158,24 @@ public class ReservationService {
         // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
         double cost = billingService.calculateTripCost(userId, durationMinutes);
 
+        // Apply flex dollars to reduce the cost before charging
+        int flexDollarsUsed = 0;
+        double finalCostToCharge = cost;
+
+        if (cost > 0) {
+            // Apply flex dollars to the trip cost
+            FlexDollarService.AppliedFlexDollarsResult flexResult =
+                    flexdollarservice.applyFlexDollarsToTrip(userId, cost);
+            flexDollarsUsed = flexResult.getFlexDollarsUsed();
+            finalCostToCharge = flexResult.getFinalCostToCharge();
+
+            if (flexDollarsUsed > 0) {
+                System.out.println("💰 Applied " + flexDollarsUsed + " flex dollars to trip #" +
+                        " (reduced cost from $" + String.format("%.2f", cost) +
+                        " to $" + String.format("%.2f", finalCostToCharge) + ")");
+            }
+        }
+
         // create and save ride (R-PRC-04: maintain log of all trips and charges)
         Rides ride = new Rides();
         ride.setUser(user);
@@ -170,23 +187,36 @@ public class ReservationService {
         ride.setDuration(durationMinutes);
         ride.setDistance(distanceKm);
         ride.setCost(cost);
+        ride.setFlexDollarsUsed(flexDollarsUsed);
         ridesRepo.save(ride);
 
-        // Automatically charge payment if cost > 0 (no active subscription)
-        if (cost > 0) {
+        // Check subscription status to determine proper messaging
+        boolean hasActiveSubscription = userSubscriptionRepository.hasActiveSubscription(userId);
+
+        // Automatically charge payment if finalCostToCharge > 0 (after flex dollars applied)
+        if (finalCostToCharge > 0) {
             try {
                 paymentService.chargeForTrip(
-                    userId,
-                    cost,
-                    String.format("Bike trip #%d: %s to %s (%.1f minutes)",
-                        ride.getRide_id(), startLocation, endLocation, durationMinutes)
+                        userId,
+                        finalCostToCharge,
+                        String.format("Bike trip #%d: %s to %s (%.1f minutes)",
+                                ride.getRide_id(), startLocation, endLocation, durationMinutes)
                 );
-                System.out.println("💳 Charged $" + String.format("%.2f", cost) + " CAD for trip #" + ride.getRide_id());
+                System.out.println("💳 Charged $" + String.format("%.2f", finalCostToCharge) + " CAD for trip #" + ride.getRide_id());
             } catch (Exception e) {
                 System.err.println("⚠️ Failed to charge for trip #" + ride.getRide_id() + ": " + e.getMessage());
             }
         } else {
-            System.out.println("✅ Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
+            // finalCostToCharge is 0 - determine why
+            if (hasActiveSubscription && cost == 0) {
+                System.out.println("✅ Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
+            } else if (flexDollarsUsed > 0) {
+                System.out.println("✅ Trip #" + ride.getRide_id() + " fully covered by flex dollars (no charge)");
+            } else if (cost == 0) {
+                System.out.println("✅ Trip #" + ride.getRide_id() + " free (very short trip, no charge)");
+            } else {
+                System.out.println("✅ Trip #" + ride.getRide_id() + " completed (no charge)");
+            }
         }
 
         // reset bike
@@ -197,7 +227,8 @@ public class ReservationService {
         bikeRepo.save(bike);
         loyaltyService.evaluateTier(userId);
 
-        if(station.getNumberOfBikesDocked() < station.getBikeCapacity()*0.25){
+        // Award flex dollars only if station is less than 25% filled AND user has no active subscription
+        if (station.getNumberOfBikesDocked() < station.getBikeCapacity() * 0.25 && !hasActiveSubscription) {
             flexdollarservice.addFlexDollars(user, 5);
         }
     }
@@ -218,66 +249,66 @@ public class ReservationService {
             }
         }
     }
-    
 
 
-        public void startGuestTrip(Integer bikeId) {
-            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
-                    .orElseThrow(() -> new IllegalStateException("Bike is not available for a guest trip."));
-    
-            var dock = dockRepo.findByBike_Id(bikeId)
-                    .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
-    
-            Long stationId = dock.getStation().getId();
-            var station = dockstationRepo.findById(stationId)
-                    .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
-    
-            String startStationName = station.getName();
-  
-            dock.setBike(null);
-            dockRepo.save(dock);
-    
-            bike.setBikeStatus(BikeStatus.on_trip);
-            bike.setCurrentUser(null);
-            bike.setReservationExpDate(null);
-            bike.setReservationExpTime(null);
-            bike.setTripStartTime(LocalDateTime.now());
-            bike.setTripStartStationName(startStationName);
-    
-            bikeRepo.save(bike);
+
+    public void startGuestTrip(Integer bikeId) {
+        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
+                .orElseThrow(() -> new IllegalStateException("Bike is not available for a guest trip."));
+
+        var dock = dockRepo.findByBike_Id(bikeId)
+                .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
+
+        Long stationId = dock.getStation().getId();
+        var station = dockstationRepo.findById(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
+
+        String startStationName = station.getName();
+
+        dock.setBike(null);
+        dockRepo.save(dock);
+
+        bike.setBikeStatus(BikeStatus.on_trip);
+        bike.setCurrentUser(null);
+        bike.setReservationExpDate(null);
+        bike.setReservationExpTime(null);
+        bike.setTripStartTime(LocalDateTime.now());
+        bike.setTripStartStationName(startStationName);
+
+        bikeRepo.save(bike);
+    }
+
+    public void endGuestTrip(Integer bikeId, Long stationId) {
+        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
+                .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
+
+
+        if (bike.getCurrentUser() != null) {
+            throw new IllegalStateException("This trip belongs to a registered user.");
         }
-    
-        public void endGuestTrip(Integer bikeId, Long stationId) {
-            var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
-                    .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
-    
 
-            if (bike.getCurrentUser() != null) {
-                throw new IllegalStateException("This trip belongs to a registered user.");
-            }
-    
-            var station = dockstationRepo.findById(stationId)
-                    .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
-    
-            if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
-                throw new IllegalStateException("No empty dock available at this station.");
-            }
-    
-            var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
-                    .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
-    
-            emptyDock.setBike(bike);
-            dockRepo.save(emptyDock);
-    
-            bike.setBikeStatus(BikeStatus.available);
-            bike.setCurrentUser(null);
-            bike.setReservationExpDate(null);
-            bike.setReservationExpTime(null);
-    
-            bikeRepo.save(bike);
+        var station = dockstationRepo.findById(stationId)
+                .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
+
+        if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
+            throw new IllegalStateException("No empty dock available at this station.");
         }
-    
-    
+
+        var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
+                .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
+
+        emptyDock.setBike(bike);
+        dockRepo.save(emptyDock);
+
+        bike.setBikeStatus(BikeStatus.available);
+        bike.setCurrentUser(null);
+        bike.setReservationExpDate(null);
+        bike.setReservationExpTime(null);
+
+        bikeRepo.save(bike);
+    }
+
+
 
 
 

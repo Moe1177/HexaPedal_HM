@@ -32,7 +32,7 @@ public class BillingService {
         return finalCost;
     }
 
-    public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
+    public String generateCostBreakdown(Long userId, double durationMinutes, double cost, int flexDollarsUsed) {
         BigDecimal duration = BigDecimal.valueOf(durationMinutes);
         BigDecimal baseCost = BASE_RATE_PER_MINUTE.multiply(duration)
                 .setScale(2, RoundingMode.HALF_UP);
@@ -41,24 +41,32 @@ public class BillingService {
                 createRiderProxy(userId)
         ).getDiscountPercentage();
 
+        double flexDollarsInDollars = flexDollarsUsed / 100.0;
+        double finalCost = cost - flexDollarsInDollars;
+
+        StringBuilder breakdown = new StringBuilder();
+        breakdown.append(String.format("Base: %.1f minutes × $0.01/minute = $%.2f CAD\n",
+                durationMinutes, baseCost.doubleValue()));
+
         if (discountPercentage > 0) {
-            return String.format(
-                    "Base: %.1f minutes × $0.01/minute = $%.2f CAD\n" +
-                            "Loyalty discount (%.0f%%): -$%.2f CAD\n" +
-                            "Final cost: $%.2f CAD",
-                    durationMinutes,
-                    baseCost.doubleValue(),
+            breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
                     discountPercentage * 100,
-                    baseCost.doubleValue() - cost,
-                    cost
-            );
+                    baseCost.doubleValue() - cost));
         }
 
-        return String.format(
-                "Pay-per-trip: %.1f minutes × $0.01/minute = $%.2f CAD",
-                durationMinutes,
-                cost
-        );
+        if (flexDollarsUsed > 0) {
+            breakdown.append(String.format("Flex dollars applied: -%d flex dollars ($%.2f CAD)\n",
+                    flexDollarsUsed, flexDollarsInDollars));
+        }
+
+        breakdown.append(String.format("Final cost: $%.2f CAD", Math.max(0, finalCost)));
+
+        return breakdown.toString();
+    }
+
+    // Maintain backward compatibility for existing calls
+    public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
+        return generateCostBreakdown(userId, durationMinutes, cost, 0);
     }
 
     @Transactional

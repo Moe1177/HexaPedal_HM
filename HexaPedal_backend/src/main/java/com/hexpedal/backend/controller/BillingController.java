@@ -47,10 +47,12 @@ public class BillingController {
             return ResponseEntity.status(403).body("You can only view your own trip summaries");
         }
 
+        int flexDollarsUsed = ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0;
         String costBreakdown = billingService.generateCostBreakdown(
                 user.getId(),
                 ride.getDuration(),
-                ride.getCost()
+                ride.getCost(),
+                flexDollarsUsed
         );
 
         TripSummaryDto summary = TripSummaryDto.from(ride, costBreakdown);
@@ -110,4 +112,3 @@ public class BillingController {
 
     private record CostResponse(double cost, String message) {}
 }
-
