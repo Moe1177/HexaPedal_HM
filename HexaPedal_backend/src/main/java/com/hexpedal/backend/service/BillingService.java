@@ -25,14 +25,12 @@ public class BillingService {
         BigDecimal totalCost = plan.calculateCost(durationMinutes)
                 .setScale(2, RoundingMode.HALF_UP);
 
-
-
         double finalCost = loyaltyService.applyDiscount(userId, totalCost.doubleValue());
 
         return finalCost;
     }
 
-    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double finalCost) {
+    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double cost, int flexDollarsUsed) {
         BikePricingPlan plan = BikePricingPlan.fromBikeType(bikeType);
 
         BigDecimal baseFee = plan.getBaseFee();
@@ -45,6 +43,9 @@ public class BillingService {
                 createRiderProxy(userId)
         ).getDiscountPercentage();
 
+        double flexDollarsInDollars = flexDollarsUsed / 100.0;
+        double finalCost = cost - flexDollarsInDollars;
+
         StringBuilder breakdown = new StringBuilder();
         breakdown.append(String.format("Bike Type: %s\n", plan.getBikeType()));
         breakdown.append(String.format("Base Fee: $%.2f CAD\n", baseFee));
@@ -52,21 +53,11 @@ public class BillingService {
                 durationMinutes, ratePerMinute, timeCost));
         breakdown.append(String.format("Subtotal: $%.2f CAD\n", totalBeforeDiscount));
 
-        double flexDollarsInDollars = flexDollarsUsed / 100.0;
-        double finalCost = cost - flexDollarsInDollars;
-
-        StringBuilder breakdown = new StringBuilder();
-        breakdown.append(String.format("Base: %.1f minutes × $0.01/minute = $%.2f CAD\n",
-                durationMinutes, baseCost.doubleValue()));
-
         if (discountPercentage > 0) {
-            BigDecimal discountAmount = totalBeforeDiscount.subtract(BigDecimal.valueOf(finalCost))
+            BigDecimal discountAmount = totalBeforeDiscount.subtract(BigDecimal.valueOf(cost))
                     .setScale(2, RoundingMode.HALF_UP);
             breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
                     discountPercentage * 100, discountAmount));
-            breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
-                    discountPercentage * 100,
-                    baseCost.doubleValue() - cost));
         }
 
         if (flexDollarsUsed > 0) {
@@ -74,17 +65,14 @@ public class BillingService {
                     flexDollarsUsed, flexDollarsInDollars));
         }
 
-        breakdown.append(String.format("Final cost: $%.2f CAD", finalCost));
-
-        return breakdown.toString();
         breakdown.append(String.format("Final cost: $%.2f CAD", Math.max(0, finalCost)));
 
         return breakdown.toString();
     }
 
     // Maintain backward compatibility for existing calls
-    public String generateCostBreakdown(Long userId, double durationMinutes, double cost) {
-        return generateCostBreakdown(userId, durationMinutes, cost, 0);
+    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double cost) {
+        return generateCostBreakdown(userId, bikeType, durationMinutes, cost, 0);
     }
 
     @Transactional
