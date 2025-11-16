@@ -262,13 +262,21 @@ public class LoyaltyService {
         List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
         List<WeekData> weekDataList = new ArrayList<>();
 
+        LocalDateTime now = LocalDateTime.now();
+
         for (int i = 0; i < weeks; i++) {
-            Instant weekStart = Instant.now().minus(7L * (i + 1), ChronoUnit.DAYS);
-            Instant weekEnd = Instant.now().minus(7L * i, ChronoUnit.DAYS);
+            LocalDateTime weekStart = now.minusWeeks(i)
+                    .with(java.time.DayOfWeek.MONDAY)
+                    .withHour(0).withMinute(0).withSecond(0).withNano(0);
+
+            LocalDateTime weekEnd = weekStart.plusWeeks(1);
+
+            Instant weekStartInstant = weekStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant weekEndInstant = weekEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             long tripsInWeek = allRides.stream()
-                    .filter(r -> r.getStartTimestamp().isAfter(weekStart)
-                            && r.getStartTimestamp().isBefore(weekEnd))
+                    .filter(r -> !r.getStartTimestamp().isBefore(weekStartInstant)
+                            && r.getStartTimestamp().isBefore(weekEndInstant))
                     .count();
 
             weekDataList.add(new WeekData(i + 1, (int) tripsInWeek, requiredTrips));
@@ -476,13 +484,21 @@ public class LoyaltyService {
     private boolean meetsWeeklyTripRequirement(Long riderId, int tripsPerWeek, int weeks) {
         List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
 
+        LocalDateTime now = LocalDateTime.now();
+
         for (int i = 0; i < weeks; i++) {
-            Instant weekStart = Instant.now().minus(7L * (i + 1), ChronoUnit.DAYS);
-            Instant weekEnd = Instant.now().minus(7L * i, ChronoUnit.DAYS);
+            LocalDateTime weekStart = now.minusWeeks(i)
+                    .with(java.time.DayOfWeek.MONDAY)
+                    .withHour(0).withMinute(0).withSecond(0).withNano(0);
+
+            LocalDateTime weekEnd = weekStart.plusWeeks(1);
+
+            Instant weekStartInstant = weekStart.atZone(ZoneId.systemDefault()).toInstant();
+            Instant weekEndInstant = weekEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             long tripsInWeek = allRides.stream()
-                    .filter(r -> r.getStartTimestamp().isAfter(weekStart)
-                            && r.getStartTimestamp().isBefore(weekEnd))
+                    .filter(r -> !r.getStartTimestamp().isBefore(weekStartInstant)
+                            && r.getStartTimestamp().isBefore(weekEndInstant))
                     .count();
 
             if (tripsInWeek < tripsPerWeek) {
