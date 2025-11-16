@@ -10,5 +10,5 @@ export interface Station {
     bikeCapacity: number;
     numberOfBikesDocked: number;
     docks?: Dock[];
-    state?: DockingStationState;
+    status?: DockingStationState;
 }

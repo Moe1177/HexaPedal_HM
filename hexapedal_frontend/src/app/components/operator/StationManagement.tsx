@@ -97,7 +97,7 @@ export default function StationManagement({ onStationChange }: StationManagement
       station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       station.address.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
-      filterState === "all" || station.state === filterState;
+      filterState === "all" || station.status === filterState;
     return matchesSearch && matchesFilter;
   });
 
@@ -222,10 +222,10 @@ export default function StationManagement({ onStationChange }: StationManagement
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${getStateBadgeColor(
-                          station.state
+                          station.status
                         )}`}
                       >
-                        {station.state || "Unknown"}
+                        {station.status || "Unknown"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-400">
@@ -325,7 +325,7 @@ export default function StationManagement({ onStationChange }: StationManagement
           </p>
           <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
             {
-              stations.filter((s) => s.state === DockingStationState.ACTIVE)
+              stations.filter((s) => s.status === DockingStationState.ACTIVE)
                 .length
             }
           </p>
@@ -337,7 +337,7 @@ export default function StationManagement({ onStationChange }: StationManagement
           <p className="text-2xl font-bold text-red-600 dark:text-red-400">
             {
               stations.filter(
-                (s) => s.state === DockingStationState.OUT_OF_SERVICE
+                (s) => s.status === DockingStationState.OUT_OF_SERVICE
               ).length
             }
           </p>
@@ -374,7 +374,7 @@ export default function StationManagement({ onStationChange }: StationManagement
                 token={token}
                 stationId={selectedStation.id}
                 stationName={selectedStation.name}
-                currentState={selectedStation.state}
+                currentState={selectedStation.status}
                 showToast={showToast}
               />
               <EditStationPositionModal

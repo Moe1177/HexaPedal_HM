@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import MapView from "@/app/components/views/MapView";
 import StationManagement from "@/app/components/operator/StationManagement";
@@ -12,6 +12,13 @@ function OperatorDashboardContent() {
   const [activeView, setActiveView] = useState<"map" | "stations">("map");
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
+
+  // Reload map entities whenever switching to map view
+  useEffect(() => {
+    if (activeView === "map") {
+      reloadEntities();
+    }
+  }, [activeView, reloadEntities]);
 
   const handleStationChange = () => {
     // Reload map entities when stations are modified

@@ -11,10 +11,10 @@ export enum DockingStationState {
 }
 
 /**
- * Extended Station interface with state property for docking stations
+ * Extended Station interface for docking stations
  */
 export interface DockingStation extends Station {
-  state?: DockingStationState;
+  // Inherits status from Station
 }
 
 /**

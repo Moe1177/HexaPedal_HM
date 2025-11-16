@@ -68,7 +68,7 @@ export default function EntityMarker({
 
     // Use colored icon for stations
     const icon = entity.type === "station" 
-        ? createColoredIcon((entity as any).state) 
+        ? createColoredIcon((entity as any).status) 
         : undefined;
 
     return (
@@ -85,19 +85,19 @@ export default function EntityMarker({
                         <div className="font-bold text-base mb-1">{entity.name}</div>
                         <div className="text-sm text-neutral-600 mb-2">{entity.address}</div>
                         
-                        {(entity as any).state && (
+                        {(entity as any).status && (
                             <div className="mb-2">
                                 <span className="text-xs font-medium">Status: </span>
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                    (entity as any).state === DockingStationState.ACTIVE
+                                    (entity as any).status === DockingStationState.ACTIVE
                                         ? 'bg-emerald-100 text-emerald-700'
-                                        : (entity as any).state === DockingStationState.OUT_OF_SERVICE
+                                        : (entity as any).status === DockingStationState.OUT_OF_SERVICE
                                         ? 'bg-red-100 text-red-700'
-                                        : (entity as any).state === DockingStationState.FULL
+                                        : (entity as any).status === DockingStationState.FULL
                                         ? 'bg-sky-100 text-sky-700'
                                         : 'bg-neutral-100 text-neutral-700'
                                 }`}>
-                                    {(entity as any).state}
+                                    {(entity as any).status}
                                 </span>
                             </div>
                         )}
