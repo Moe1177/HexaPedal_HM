@@ -5,12 +5,13 @@ import Link from "next/link";
 import MapView from "@/app/components/views/MapView";
 import StationManagement from "@/app/components/operator/StationManagement";
 import BikeManagement from "@/app/components/operator/BikeManagement";
+import TruckManagement from "@/app/components/operator/TruckManagement";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 import { useMapEntities } from "@/hooks/useMapEntities";
 import { DockingStation } from "@/types/DockingStation";
 
 function OperatorDashboardContent() {
-  const [activeView, setActiveView] = useState<"map" | "stations" | "bikes">("map");
+  const [activeView, setActiveView] = useState<"map" | "stations" | "bikes" | "trucks">("map");
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
 
@@ -168,6 +169,29 @@ function OperatorDashboardContent() {
               </svg>
               <span>Bike Management</span>
             </button>
+            <button
+              onClick={() => setActiveView("trucks")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeView === "trucks"
+                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                />
+              </svg>
+              <span>Truck Management</span>
+            </button>
             <Link
               href="#"
               className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -255,9 +279,13 @@ function OperatorDashboardContent() {
             <div key="stations-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
               <StationManagement onStationChange={handleStationChange} />
             </div>
-          ) : (
+          ) : activeView === "bikes" ? (
             <div key="bikes-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
               <BikeManagement onBikeChange={handleStationChange} />
+            </div>
+          ) : (
+            <div key="trucks-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
+              <TruckManagement onTruckChange={handleStationChange} />
             </div>
           )}
         </main>

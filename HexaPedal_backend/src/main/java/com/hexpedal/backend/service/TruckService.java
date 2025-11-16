@@ -2,6 +2,7 @@ package com.hexpedal.backend.service;
 
 import com.hexpedal.backend.dto.CreateTruckRequestDTO;
 import com.hexpedal.backend.model.Bike;
+import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.Dock;
 import com.hexpedal.backend.model.DockingStation;
 import com.hexpedal.backend.model.Truck;
@@ -64,11 +65,15 @@ public class TruckService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Bike " + bikeId + " is not currently docked in a station."));
 
-       
+        if (bike.getBikeStatus() != BikeStatus.available) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bike " + bikeId + " is not available for loading. Current status: " + bike.getBikeStatus());
+        }
+
         dock.setBike(null);
         dockRepository.save(dock);
-
-       
+        bike.setBikeStatus(BikeStatus.maintenance);
+        bikeRepository.save(bike);
         truck.loadBike(bike);
 
         return truckRepository.save(truck);
@@ -87,17 +92,18 @@ public class TruckService {
         DockingStation station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Station not found: " + stationId));
-
+        if (station.getStatus() == com.hexpedal.backend.model.DockingStationStates.out_of_service) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot unload bike: station " + stationId + " is out of service.");
+        }
 
         Dock emptyDock = dockRepository.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "No empty dock available at station " + stationId));
-
-
         emptyDock.setBike(bike);
         dockRepository.save(emptyDock);
-
-        // Remove from truck
+        bike.setBikeStatus(BikeStatus.available);
+        bikeRepository.save(bike);
         truck.unloadBike(bike);
 
         return truckRepository.save(truck);

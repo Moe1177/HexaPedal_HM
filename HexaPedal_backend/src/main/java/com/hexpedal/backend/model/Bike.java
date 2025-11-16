@@ -36,6 +36,14 @@ public class Bike {
     @Transient
     private static final int RESERVATION_EXPIRY_MINUTES = 10;
 
+    @Transient
+    @JsonProperty("currentStationName")
+    private String currentStationName;
+
+    @Transient
+    @JsonProperty("currentStationId")
+    private Long currentStationId;
+
 
     public Bike() {
         this.bikeStatus = BikeStatus.available;
@@ -115,6 +123,22 @@ public class Bike {
     public Long getCurrentUserId() {
         if (currentUser == null) return null;
         return currentUser.getId();
+    }
+
+    public String getCurrentStationName() {
+        return currentStationName;
+    }
+
+    public void setCurrentStationName(String currentStationName) {
+        this.currentStationName = currentStationName;
+    }
+
+    public Long getCurrentStationId() {
+        return currentStationId;
+    }
+
+    public void setCurrentStationId(Long currentStationId) {
+        this.currentStationId = currentStationId;
     }
 
   

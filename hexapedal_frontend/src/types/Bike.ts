@@ -19,6 +19,8 @@ export interface Bike {
   reservationExpTime?: string;
   tripStartTime?: string;
   tripStartStationName?: string;
+  currentStationName?: string;
+  currentStationId?: number;
 }
 
 /**

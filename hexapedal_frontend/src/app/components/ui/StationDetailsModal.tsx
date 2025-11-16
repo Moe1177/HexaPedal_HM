@@ -67,9 +67,17 @@ export default function StationDetailsModal({
       const updated = await getStationDetails(stationId!);
       setStationDetails(updated);
       // Show success alert
-      alert(`Bike #${bikeId} reserved successfully! You have 15 minutes to unlock it.`);
+      alert(`Bike #${bikeId} reserved successfully! You have 10 minutes to unlock it.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to reserve bike");
+      const errorMessage = err instanceof Error ? err.message : "Failed to reserve bike";
+      
+      // If error indicates user already has a reservation, provide helpful message
+      if (errorMessage.toLowerCase().includes("already has a reserved bike") || 
+          errorMessage.toLowerCase().includes("already has a reservation")) {
+        setError("You already have a bike reserved. Please check your dashboard sidebar to see which bike is reserved and unlock or cancel it first.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsReserving(false);
     }

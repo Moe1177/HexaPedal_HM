@@ -10,20 +10,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.repository.BikeRepository;
+import com.hexpedal.backend.repository.DockRepository;
 import org.springframework.web.bind.annotation.RequestMapping;
 import com.hexpedal.backend.service.BikeService;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/bikes")
 public class BikeController {
     private final BikeRepository bikeRepo;
     private final BikeService bikeService;
+    private final DockRepository dockRepo;
 
-    public BikeController(BikeRepository bikeRepo , BikeService bikeService) {
+    public BikeController(BikeRepository bikeRepo , BikeService bikeService, DockRepository dockRepo) {
         this.bikeRepo = bikeRepo;
         this.bikeService = bikeService;
+        this.dockRepo = dockRepo;
     }
     @PostMapping
     public ResponseEntity<Bike> createBike(@RequestBody Bike bike) {
@@ -35,7 +40,17 @@ public class BikeController {
 
     @GetMapping
     public ResponseEntity<?> getAllBikes() {
-        return ResponseEntity.ok(bikeRepo.findAll());
+        List<Bike> bikes = bikeRepo.findAll();
+        for (Bike bike : bikes) {
+            dockRepo.findByBike_Id(bike.getId()).ifPresent(dock -> {
+                if (dock.getStation() != null) {
+                    bike.setCurrentStationName(dock.getStation().getName());
+                    bike.setCurrentStationId(dock.getStation().getId());
+                }
+            });
+        }
+        
+        return ResponseEntity.ok(bikes);
     }
      @PutMapping("/{bikeId}/status")
     public ResponseEntity<Bike> updateBikeStatus(
