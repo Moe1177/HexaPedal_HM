@@ -155,8 +155,8 @@ public class ReservationService {
         String endLocation = station.getName();
         double distanceKm = 0.0d;
 
-        // Calculate cost based on trip duration (R-PRC-02: $0.01/minute)
-        double cost = billingService.calculateTripCost(userId, durationMinutes);
+        String bikeType = bike.getType();
+        double cost = billingService.calculateTripCost(userId, bikeType, durationMinutes);
 
         // Apply flex dollars to reduce the cost before charging
         int flexDollarsUsed = 0;
@@ -177,6 +177,7 @@ public class ReservationService {
         }
 
         // create and save ride (R-PRC-04: maintain log of all trips and charges)
+
         Rides ride = new Rides();
         ride.setUser(user);
         ride.setBike(bike);

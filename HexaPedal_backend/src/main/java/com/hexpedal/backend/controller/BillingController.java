@@ -47,9 +47,11 @@ public class BillingController {
             return ResponseEntity.status(403).body("You can only view your own trip summaries");
         }
 
+        String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
         int flexDollarsUsed = ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0;
         String costBreakdown = billingService.generateCostBreakdown(
                 user.getId(),
+                bikeType,
                 ride.getDuration(),
                 ride.getCost(),
                 flexDollarsUsed
@@ -93,7 +95,9 @@ public class BillingController {
             return ResponseEntity.status(403).body("You can only calculate costs for your own trips");
         }
 
-        double cost = billingService.calculateTripCost(user.getId(), ride.getDistance());
+        String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
+        double cost = billingService.calculateTripCost(user.getId(), bikeType, ride.getDuration());
+
 
         billingService.updateRideCost(rideId, cost);
 

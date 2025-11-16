@@ -14,6 +14,11 @@ import { unlockBike } from "@/app/services/user/rider/unlockBike";
 import { returnBike } from "@/app/services/user/rider/returnBike";
 import ReturnBikeModal from "@/app/components/ui/ReturnBikeModal";
 import { getUserIdFromBike } from "@/app/services/user/getUserIdFromBike";
+import LoyaltyTierBox from "@/app/components/loyalty/LoyaltyTierBox";
+import LoyaltyDetailModal from "@/app/components/loyalty/LoyaltyDetailModal";
+import TierNotification from "@/app/components/loyalty/TierNotification";
+import { getLoyaltyStatus, evaluateTier, dismissNotification } from "@/app/services/loyalty/loyaltyService";
+import { LoyaltyStatus } from "@/types/Loyalty";
 
 type ViewType = "map" | "rides" | "billing" | "profile";
 
@@ -41,6 +46,12 @@ export default function RiderDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  
+  // Loyalty state
+  const [loyaltyStatus, setLoyaltyStatus] = useState<LoyaltyStatus | null>(null);
+  const [isLoadingLoyalty, setIsLoadingLoyalty] = useState(false);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [showTierNotification, setShowTierNotification] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -49,6 +60,30 @@ export default function RiderDashboard() {
       setEmail(userEmail);
       setUserId(id);
     }
+  }, [token]);
+
+  // Fetch loyalty status on mount
+  useEffect(() => {
+    const fetchLoyaltyStatus = async () => {
+      if (!token) return;
+      
+      setIsLoadingLoyalty(true);
+      try {
+        const status = await getLoyaltyStatus(token);
+        setLoyaltyStatus(status);
+        
+        // Show notification if there's a tier change
+        if (status.hasNotification) {
+          setShowTierNotification(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch loyalty status:", err);
+      } finally {
+        setIsLoadingLoyalty(false);
+      }
+    };
+
+    fetchLoyaltyStatus();
   }, [token]);
 
   const handleReserveBike = async (bikeId: number) => {
@@ -149,6 +184,41 @@ export default function RiderDashboard() {
     }
   };
 
+  const handleRefreshTier = async () => {
+    if (!token) return;
+    
+    try {
+      const status = await evaluateTier(token);
+      setLoyaltyStatus(status);
+      
+      // Show notification if there's a tier change
+      if (status.hasNotification) {
+        setShowTierNotification(true);
+      }
+    } catch (err) {
+      console.error("Failed to evaluate tier:", err);
+    }
+  };
+
+  const handleDismissNotification = async () => {
+    if (!token) return;
+    
+    setShowTierNotification(false);
+    try {
+      await dismissNotification(token);
+      
+      // Update local state to mark notification as shown
+      if (loyaltyStatus) {
+        setLoyaltyStatus({
+          ...loyaltyStatus,
+          hasNotification: false,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to dismiss notification:", err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <nav className="bg-white/70 dark:bg-neutral-900/80 backdrop-blur-xl border-b border-neutral-200/60 dark:border-neutral-800 shadow-sm">
@@ -228,11 +298,12 @@ export default function RiderDashboard() {
             </button>
           </nav>
 
-          <div className="mt-8 p-4 bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
-            <h4 className="font-semibold mb-2 text-neutral-900 dark:text-neutral-100">Active Pass</h4>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">Monthly Pass</p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-500">Valid until Dec 31, 2024</p>
-          </div>
+          <LoyaltyTierBox
+            loyaltyStatus={loyaltyStatus}
+            isLoading={isLoadingLoyalty}
+            onRefresh={handleRefreshTier}
+            onShowDetails={() => setShowLoyaltyModal(true)}
+          />
 
           {activeTrip && (
             <div className="mt-4 p-4 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
@@ -376,6 +447,20 @@ export default function RiderDashboard() {
           onReturn={handleReturnBike}
           bikeId={activeTrip.bikeId}
           isLoading={isLoading}
+        />
+      )}
+
+      {showLoyaltyModal && loyaltyStatus && (
+        <LoyaltyDetailModal
+          loyaltyStatus={loyaltyStatus}
+          onClose={() => setShowLoyaltyModal(false)}
+        />
+      )}
+
+      {showTierNotification && loyaltyStatus && (
+        <TierNotification
+          loyaltyStatus={loyaltyStatus}
+          onDismiss={handleDismissNotification}
         />
       )}
     </div>
