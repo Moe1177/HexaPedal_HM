@@ -2,7 +2,6 @@ package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.dto.LoyaltyStatusDto;
 import com.hexpedal.backend.dto.TierProgressDto;
-import com.hexpedal.backend.model.Rider;
 import com.hexpedal.backend.model.RiderLoyalty;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.UserRepository;
@@ -41,7 +40,7 @@ public class LoyaltyController {
     }
 
     @PostMapping("/evaluate")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<LoyaltyStatusDto> evaluateTier(Authentication authentication) {
         String email = authentication.getName();
         var user = userRepository.findByEmail(email)
@@ -53,12 +52,8 @@ public class LoyaltyController {
     }
 
     @PostMapping("/notification/dismiss")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> dismissNotification(@AuthenticationPrincipal User user) {
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can dismiss notifications");
-        }
-
         loyaltyService.markNotificationShown(user.getId());
         return ResponseEntity.ok().body("Notification dismissed");
     }

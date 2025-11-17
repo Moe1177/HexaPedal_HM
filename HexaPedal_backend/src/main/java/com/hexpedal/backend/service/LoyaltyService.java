@@ -6,6 +6,7 @@ import com.hexpedal.backend.model.*;
 import com.hexpedal.backend.repository.RiderLoyaltyRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.ReservationHistoryRepository;
+import com.hexpedal.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +25,14 @@ public class LoyaltyService {
     private final RiderLoyaltyRepository loyaltyRepo;
     private final RidesRepository ridesRepo;
     private final ReservationHistoryRepository reservationHistoryRepo;
+    private final UserRepository userRepository;
 
     @Transactional
-    public RiderLoyalty getOrCreateLoyalty(Rider rider) {
-        return loyaltyRepo.findByRider(rider)
+    public RiderLoyalty getOrCreateLoyalty(User user) {
+        return loyaltyRepo.findByUser(user)
                 .orElseGet(() -> {
                     RiderLoyalty loyalty = RiderLoyalty.builder()
-                            .rider(rider)
+                            .user(user)
                             .currentTier(LoyaltyTier.NONE)
                             .previousTier(LoyaltyTier.NONE)
                             .build();
@@ -39,17 +41,17 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public RiderLoyalty evaluateTier(Long riderId) {
-        Rider rider = new Rider();
-        rider.setId(riderId);
-
-        RiderLoyalty loyalty = getOrCreateLoyalty(rider);
+    public RiderLoyalty evaluateTier(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        
+        RiderLoyalty loyalty = getOrCreateLoyalty(user);
 
         // Update statistics
-        updateStatistics(loyalty, riderId);
+        updateStatistics(loyalty, userId);
 
         // Determine new tier
-        LoyaltyTier newTier = calculateTier(loyalty, riderId);
+        LoyaltyTier newTier = calculateTier(loyalty, userId);
 
         if (newTier != loyalty.getCurrentTier()) {
             if (newTier.ordinal() > loyalty.getCurrentTier().ordinal()) {
@@ -64,12 +66,12 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public TierProgressDto calculateTierProgress(Long riderId) {
-        Rider rider = new Rider();
-        rider.setId(riderId);
+    public TierProgressDto calculateTierProgress(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
-        RiderLoyalty loyalty = getOrCreateLoyalty(rider);
-        updateStatistics(loyalty, riderId);
+        RiderLoyalty loyalty = getOrCreateLoyalty(user);
+        updateStatistics(loyalty, userId);
 
         LoyaltyTier currentTier = loyalty.getCurrentTier();
         LoyaltyTier nextTier = getNextTier(currentTier);
@@ -83,7 +85,7 @@ public class LoyaltyService {
             );
         }
 
-        List<CriteriaStatusDto> missingCriteria = checkTierCriteria(loyalty, riderId, nextTier);
+        List<CriteriaStatusDto> missingCriteria = checkTierCriteria(loyalty, userId, nextTier);
         boolean canUpgrade = missingCriteria.stream().allMatch(CriteriaStatusDto::met);
 
         return new TierProgressDto(
@@ -103,7 +105,7 @@ public class LoyaltyService {
         };
     }
 
-    private List<CriteriaStatusDto> checkTierCriteria(RiderLoyalty loyalty, Long riderId, LoyaltyTier targetTier) {
+    private List<CriteriaStatusDto> checkTierCriteria(RiderLoyalty loyalty, Long userId, LoyaltyTier targetTier) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
         switch (targetTier) {
@@ -113,12 +115,12 @@ public class LoyaltyService {
             case BRONZE -> criteria.addAll(checkBronzeCriteria(loyalty));
             case SILVER -> {
                 criteria.addAll(checkBronzeCriteria(loyalty));
-                criteria.addAll(checkSilverSpecificCriteria(loyalty, riderId));
+                criteria.addAll(checkSilverSpecificCriteria(loyalty, userId));
             }
             case GOLD -> {
                 criteria.addAll(checkBronzeCriteria(loyalty));
-                criteria.addAll(checkSilverSpecificCriteria(loyalty, riderId));
-                criteria.addAll(checkGoldSpecificCriteria(riderId));
+                criteria.addAll(checkSilverSpecificCriteria(loyalty, userId));
+                criteria.addAll(checkGoldSpecificCriteria(userId));
             }
         }
 
@@ -177,7 +179,7 @@ public class LoyaltyService {
         return criteria;
     }
 
-    private List<CriteriaStatusDto> checkSilverSpecificCriteria(RiderLoyalty loyalty, Long riderId) {
+    private List<CriteriaStatusDto> checkSilverSpecificCriteria(RiderLoyalty loyalty, Long userId) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
         // SL-002: At least 5 successful claimed reservations
@@ -196,7 +198,7 @@ public class LoyaltyService {
         }
 
         // SL-003: 5 trips per month for last 3 months
-        MonthlyProgress monthlyProgress = calculateMonthlyProgress(riderId, 5, 3);
+        MonthlyProgress monthlyProgress = calculateMonthlyProgress(userId, 5, 3);
         if (monthlyProgress.allMonthsMet()) {
             criteria.add(CriteriaStatusDto.met(
                     "SL-003",
@@ -213,11 +215,11 @@ public class LoyaltyService {
         return criteria;
     }
 
-    private List<CriteriaStatusDto> checkGoldSpecificCriteria(Long riderId) {
+    private List<CriteriaStatusDto> checkGoldSpecificCriteria(Long userId) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
         // GL-002: 5 trips per week for last 12 weeks (3 months)
-        WeeklyProgress weeklyProgress = calculateWeeklyProgress(riderId, 5, 12);
+        WeeklyProgress weeklyProgress = calculateWeeklyProgress(userId, 5, 12);
         if (weeklyProgress.allWeeksMet()) {
             criteria.add(CriteriaStatusDto.met(
                     "GL-002",
@@ -234,8 +236,8 @@ public class LoyaltyService {
         return criteria;
     }
 
-    private MonthlyProgress calculateMonthlyProgress(Long riderId, int requiredTrips, int months) {
-        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
+    private MonthlyProgress calculateMonthlyProgress(Long userId, int requiredTrips, int months) {
+        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
         List<MonthData> monthDataList = new ArrayList<>();
 
         LocalDateTime now = LocalDateTime.now();
@@ -261,8 +263,8 @@ public class LoyaltyService {
         return new MonthlyProgress(monthDataList);
     }
 
-    private WeeklyProgress calculateWeeklyProgress(Long riderId, int requiredTrips, int weeks) {
-        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
+    private WeeklyProgress calculateWeeklyProgress(Long userId, int requiredTrips, int weeks) {
+        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
         List<WeekData> weekDataList = new ArrayList<>();
 
         for (int i = 0; i < weeks; i++) {
@@ -342,11 +344,11 @@ public class LoyaltyService {
     }
 
 
-    private void updateStatistics(RiderLoyalty loyalty, Long riderId) {
+    private void updateStatistics(RiderLoyalty loyalty, Long userId) {
         Instant oneYearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
 
         // Update trip statistics from Rides table
-        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
+        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
         List<Rides> ridesLastYear = allRides.stream()
                 .filter(r -> r.getStartTimestamp().isAfter(oneYearAgo))
                 .toList();
@@ -359,22 +361,22 @@ public class LoyaltyService {
 
         // Update reservation statistics from ReservationHistory table
         // BR-001: Count expired reservations in the last year
-        long missedReservations = reservationHistoryRepo.countExpiredReservationsLastYear(riderId, oneYearAgo);
+        long missedReservations = reservationHistoryRepo.countExpiredReservationsLastYear(userId, oneYearAgo);
         loyalty.setMissedReservationsLastYear((int) missedReservations);
 
         // SL-002: Count claimed reservations in the last year
-        long claimedReservations = reservationHistoryRepo.countClaimedReservationsLastYear(riderId, oneYearAgo);
+        long claimedReservations = reservationHistoryRepo.countClaimedReservationsLastYear(userId, oneYearAgo);
         loyalty.setSuccessfulClaimedReservationsLastYear((int) claimedReservations);
     }
 
-    private LoyaltyTier calculateTier(RiderLoyalty loyalty, Long riderId) {
+    private LoyaltyTier calculateTier(RiderLoyalty loyalty, Long userId) {
         // Check Gold tier (GL-001, GL-002, GL-003)
-        if (meetsGoldCriteria(loyalty, riderId)) {
+        if (meetsGoldCriteria(loyalty, userId)) {
             return LoyaltyTier.GOLD;
         }
 
         // Check Silver tier (SL-001, SL-002, SL-003, SL-004)
-        if (meetsSilverCriteria(loyalty, riderId)) {
+        if (meetsSilverCriteria(loyalty, userId)) {
             return LoyaltyTier.SILVER;
         }
 
@@ -405,7 +407,7 @@ public class LoyaltyService {
         return true;
     }
 
-    private boolean meetsSilverCriteria(RiderLoyalty loyalty, Long riderId) {
+    private boolean meetsSilverCriteria(RiderLoyalty loyalty, Long userId) {
         // SL-001: Must meet Bronze tier eligibility
         if (!meetsBronzeCriteria(loyalty)) {
             return false;
@@ -417,29 +419,29 @@ public class LoyaltyService {
         }
 
         // SL-003: Surpassed 5 trips per month for last 3 months
-        if (!meetsMonthlyTripRequirement(riderId, 5, 3)) {
+        if (!meetsMonthlyTripRequirement(userId, 5, 3)) {
             return false;
         }
 
         return true;
     }
 
-    private boolean meetsGoldCriteria(RiderLoyalty loyalty, Long riderId) {
+    private boolean meetsGoldCriteria(RiderLoyalty loyalty, Long userId) {
         // GL-001: Must meet Silver tier eligibility
-        if (!meetsSilverCriteria(loyalty, riderId)) {
+        if (!meetsSilverCriteria(loyalty, userId)) {
             return false;
         }
 
         // GL-002: Surpasses 5 trips every week for last 3 months
-        if (!meetsWeeklyTripRequirement(riderId, 5, 12)) { // 12 weeks = 3 months
+        if (!meetsWeeklyTripRequirement(userId, 5, 12)) { // 12 weeks = 3 months
             return false;
         }
 
         return true;
     }
 
-    private boolean meetsMonthlyTripRequirement(Long riderId, int tripsPerMonth, int months) {
-        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
+    private boolean meetsMonthlyTripRequirement(Long userId, int tripsPerMonth, int months) {
+        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -463,8 +465,8 @@ public class LoyaltyService {
         return true;
     }
 
-    private boolean meetsWeeklyTripRequirement(Long riderId, int tripsPerWeek, int weeks) {
-        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
+    private boolean meetsWeeklyTripRequirement(Long userId, int tripsPerWeek, int weeks) {
+        List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
 
         for (int i = 0; i < weeks; i++) {
             Instant weekStart = Instant.now().minus(7L * (i + 1), ChronoUnit.DAYS);
@@ -484,8 +486,8 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public double applyDiscount(Long riderId, double originalCost) {
-        RiderLoyalty loyalty = loyaltyRepo.findByRiderId(riderId)
+    public double applyDiscount(Long userId, double originalCost) {
+        RiderLoyalty loyalty = loyaltyRepo.findByUserId(userId)
                 .orElse(null);
 
         if (loyalty == null || loyalty.getCurrentTier() == LoyaltyTier.NONE) {
@@ -497,8 +499,8 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public int getReservationHoldMinutes(Long riderId) {
-        RiderLoyalty loyalty = loyaltyRepo.findByRiderId(riderId)
+    public int getReservationHoldMinutes(Long userId) {
+        RiderLoyalty loyalty = loyaltyRepo.findByUserId(userId)
                 .orElse(null);
 
         if (loyalty == null) {
@@ -509,8 +511,8 @@ public class LoyaltyService {
     }
 
     @Transactional
-    public void markNotificationShown(Long riderId) {
-        loyaltyRepo.findByRiderId(riderId).ifPresent(loyalty -> {
+    public void markNotificationShown(Long userId) {
+        loyaltyRepo.findByUserId(userId).ifPresent(loyalty -> {
             loyalty.setLastTierNotificationShown(true);
             loyaltyRepo.save(loyalty);
         });

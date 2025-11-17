@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+
 import java.util.List;
 
 @Service
@@ -64,6 +65,10 @@ public class TruckService {
         Truck truck = Truck.builder()
                 .capacity(req.capacity())
                 .build();
+    
+        if (truck.getBikes() == null) {
+            truck.setBikes(new java.util.ArrayList<>());
+        }
 
         return truckRepository.save(truck);
     }
@@ -111,8 +116,7 @@ public class TruckService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Bike " + bikeId + " is not on truck " + truckId));
 
-        // Verify station exists
-        stationRepository.findById(stationId)
+        DockingStation station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Station not found: " + stationId));
         if (station.getStatus() == com.hexpedal.backend.model.DockingStationStates.out_of_service) {

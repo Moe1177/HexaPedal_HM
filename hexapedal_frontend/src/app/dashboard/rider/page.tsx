@@ -186,6 +186,11 @@ export default function RiderDashboard() {
                 console.log("Route restored from saved trip data");
               } catch (routeErr) {
                 console.error("Failed to restore route:", routeErr);
+                const errorMessage = routeErr instanceof Error ? routeErr.message : "Failed to fetch route";
+                if (errorMessage.includes("Invalid coordinates") || errorMessage.includes("too large")) {
+                  console.warn("Route cannot be displayed due to invalid coordinates. Trip will continue without route visualization.");
+                  setError("Warning: Route cannot be displayed. Station coordinates may be invalid. Please contact support.");
+                }
               }
             }
           }
@@ -377,10 +382,14 @@ export default function RiderDashboard() {
           setRouteInfo(route);
         } catch (routeErr) {
           console.error("Failed to fetch route:", routeErr);
-          // Continue without route
+          const errorMessage = routeErr instanceof Error ? routeErr.message : "Failed to fetch route";
+          if (errorMessage.includes("Invalid coordinates") || errorMessage.includes("too large")) {
+            setError("Warning: Route cannot be displayed. Station coordinates may be invalid. Your trip will continue, but route visualization is unavailable.");
+          }
         }
       } else {
         console.warn("Could not determine start station coordinates, skipping route");
+        setError("Warning: Could not determine start station coordinates. Route visualization will not be available.");
       }
       
       setActiveTrip({ 

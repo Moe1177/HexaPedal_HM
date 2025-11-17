@@ -31,11 +31,12 @@ public class MapService implements MapEntityListener {
         System.out.println("Updated the map with this updated state: " + state);
     }
 
-    /**
-     * List all the entities on top of the map.
-     */
     public List<MapEntity> getMapEntities(){
-        return Map.getInstance().getMapEntities();
+        List<DockingStation> freshStations = dockingStationService.cacheDockingStations();
+        List<MapEntity> mapEntities = castIntoEntities(freshStations);
+        Map.getInstance().setMapEntities(mapEntities);
+        initListener();
+        return mapEntities;
     }
 
     /**

@@ -124,9 +124,16 @@ public class DockingStationService {
     }
 
     public DockingStation create(CreateStationRequestDTO req) {
+
+        if (stationRepo.existsByName(req.name())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A station with the name '" + req.name() + "' already exists. Station names must be unique.");
+        }
+        
+
         if (stationRepo.existsByLatitudeAndLongitude(req.latitude(), req.longitude())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A station already exists at these coordinates.");
         }
+        
         DockingStation station = new DockingStation(
                 req.name(),
                 req.latitude(),

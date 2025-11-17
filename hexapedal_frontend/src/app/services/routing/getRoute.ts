@@ -30,6 +30,16 @@ export async function getRoute(
   endLat: number,
   endLng: number
 ): Promise<RouteInfo> {
+
+  if (!isValidCoordinate(startLat, startLng) || !isValidCoordinate(endLat, endLng)) {
+    throw new Error("Invalid coordinates provided. Please ensure both start and destination stations have valid coordinates.");
+  }
+
+  const straightLineDistance = calculateDistance(startLat, startLng, endLat, endLng);
+  if (straightLineDistance > 6000000) {
+    throw new Error(`Distance between points is too large (${formatDistance(straightLineDistance)}). Please check that station coordinates are correct.`);
+  }
+
   try {
     // Use backend proxy to bypass CORS
     const url = `${API_BASE_URL}/api/routing/route?startLat=${startLat}&startLng=${startLng}&endLat=${endLat}&endLng=${endLng}`;
@@ -98,6 +108,22 @@ export async function getRoute(
       duration: durationSeconds,
     };
   }
+}
+
+/**
+ * Validate if coordinates are valid (not null, not 0,0, and within valid ranges)
+ */
+function isValidCoordinate(lat: number, lng: number): boolean {
+  if (lat === null || lng === null || lat === undefined || lng === undefined) {
+    return false;
+  }
+  if (lat === 0 && lng === 0) {
+    return false; // (0,0) is in the ocean and likely invalid
+  }
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    return false; // Out of valid coordinate ranges
+  }
+  return true;
 }
 
 /**

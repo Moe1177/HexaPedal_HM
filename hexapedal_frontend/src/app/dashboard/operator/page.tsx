@@ -6,13 +6,16 @@ import MapView from "@/app/components/views/MapView";
 import StationManagement from "@/app/components/operator/StationManagement";
 import BikeManagement from "@/app/components/operator/BikeManagement";
 import TruckManagement from "@/app/components/operator/TruckManagement";
+import AuditLog from "@/app/components/operator/AuditLog";
+import RiderDashboard from "@/app/dashboard/rider/page";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 import { useMapEntities } from "@/hooks/useMapEntities";
 import { DockingStation } from "@/types/DockingStation";
 import { connectToWebSocket, disconnectWebSocket } from "@/app/services/utils/webSocket";
 
 function OperatorDashboardContent() {
-  const [activeView, setActiveView] = useState<"map" | "stations" | "bikes" | "trucks">("map");
+  const [mode, setMode] = useState<"operator" | "rider">("operator");
+  const [activeView, setActiveView] = useState<"map" | "stations" | "bikes" | "trucks" | "audit">("map");
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
 
@@ -87,10 +90,39 @@ function OperatorDashboardContent() {
                 HexaPedal
               </span>
               <span className="ml-4 px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full text-sm font-medium">
-                Operator Dashboard
+                {mode === "operator" ? "Operator Dashboard" : "Rider Mode"}
               </span>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMode(mode === "operator" ? "rider" : "operator")}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-600 hover:to-sky-600 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                title={mode === "operator" ? "Switch to Rider Mode" : "Switch to Operator Mode"}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  {mode === "operator" ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z"
+                    />
+                  )}
+                </svg>
+                {mode === "operator" ? "Rider Mode" : "Operator Mode"}
+              </button>
               <button className="p-2 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors">
                 <svg
                   className="w-6 h-6"
@@ -116,9 +148,16 @@ function OperatorDashboardContent() {
         </div>
       </nav>
 
-      <div className="flex h-[calc(100vh-73px)]">
-        <aside className="w-64 bg-white/50 dark:bg-neutral-900/40 backdrop-blur-sm border-r border-neutral-200/60 dark:border-neutral-800 p-6">
-          <nav className="space-y-2">
+      {mode === "rider" ? (
+        <div className="h-[calc(100vh-73px)] overflow-hidden">
+          <div className="operator-rider-mode-wrapper h-full w-full">
+            <RiderDashboard />
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-[calc(100vh-73px)]">
+          <aside className="w-64 bg-white/50 dark:bg-neutral-900/40 backdrop-blur-sm border-r border-neutral-200/60 dark:border-neutral-800 p-6">
+            <nav className="space-y-2">
             <button
               onClick={() => setActiveView("map")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
@@ -211,6 +250,29 @@ function OperatorDashboardContent() {
               </svg>
               <span>Truck Management</span>
             </button>
+            <button
+              onClick={() => setActiveView("audit")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeView === "audit"
+                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              }`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span>Audit Log</span>
+            </button>
             <Link
               href="#"
               className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
@@ -302,13 +364,18 @@ function OperatorDashboardContent() {
             <div key="bikes-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
               <BikeManagement onBikeChange={handleStationChange} />
             </div>
-          ) : (
+          ) : activeView === "trucks" ? (
             <div key="trucks-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6">
               <TruckManagement onTruckChange={handleStationChange} />
             </div>
+          ) : (
+            <div key="audit-view" className="h-full overflow-y-auto bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950">
+              <AuditLog />
+            </div>
           )}
         </main>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

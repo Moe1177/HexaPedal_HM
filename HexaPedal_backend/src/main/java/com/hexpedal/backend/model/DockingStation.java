@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "docking_stations")
@@ -100,10 +101,13 @@ public class DockingStation extends MapEntity {
         notifyListeners(this);
     }
 
+    @JsonProperty("numberOfBikesDocked")
     public int getNumberOfBikesDocked() {
         int count = 0;
-        for (Dock d : docks) {
-            if (d != null && !d.isEmpty()) count++;
+        if (docks != null) {
+            for (Dock d : docks) {
+                if (d != null && !d.isEmpty()) count++;
+            }
         }
         return count;
     }

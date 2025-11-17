@@ -1,5 +1,6 @@
 package com.hexpedal.backend.controller;
 
+import com.hexpedal.backend.dto.RideAuditDto;
 import com.hexpedal.backend.model.Rider;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.model.User;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @AllArgsConstructor
@@ -48,5 +50,14 @@ public class RideHistoryController {
 
         List<Rides> rides = rideHistoryService.getRidesByUserId(Math.toIntExact(user.getId()));
         return ResponseEntity.ok(rides);
+    }
+    @GetMapping("/audit/all")
+    @PreAuthorize("hasRole('OPERATOR')")
+    public ResponseEntity<?> getAllRidesForAudit(@AuthenticationPrincipal User user) {
+        List<Rides> rides = rideHistoryService.getAllRides();
+        List<RideAuditDto> auditLog = rides.stream()
+                .map(RideAuditDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(auditLog);
     }
 }

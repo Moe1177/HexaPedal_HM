@@ -1,8 +1,11 @@
 package com.hexpedal.backend.service;
 
 import com.hexpedal.backend.model.BikePricingPlan;
+import com.hexpedal.backend.model.Operator;
 import com.hexpedal.backend.model.Rides;
+import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.RidesRepository;
+import com.hexpedal.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +19,9 @@ public class BillingService {
 
     private final RidesRepository ridesRepository;
     private final LoyaltyService loyaltyService;
+    private final UserRepository userRepository;
 
-    private static final BigDecimal BASE_RATE_PER_MINUTE = new BigDecimal("0.01");
+    private static final double OPERATOR_DISCOUNT_PERCENTAGE = 0.50; // 50% discount for operators
 
     @Transactional
     public double calculateTripCost(Long userId, String bikeType, double durationMinutes) {
@@ -25,11 +29,19 @@ public class BillingService {
         BigDecimal totalCost = plan.calculateCost(durationMinutes)
                 .setScale(2, RoundingMode.HALF_UP);
 
+   
+        double costAfterLoyalty = loyaltyService.applyDiscount(userId, totalCost.doubleValue());
 
+      
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        
+        if (user instanceof Operator) {
+          
+            costAfterLoyalty = costAfterLoyalty * (1 - OPERATOR_DISCOUNT_PERCENTAGE);
+        }
 
-        double finalCost = loyaltyService.applyDiscount(userId, totalCost.doubleValue());
-
-        return finalCost;
+        return Math.round(costAfterLoyalty * 100.0) / 100.0; 
     }
 
     public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double finalCost) {
@@ -41,9 +53,11 @@ public class BillingService {
         BigDecimal timeCost = ratePerMinute.multiply(duration).setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalBeforeDiscount = baseFee.add(timeCost);
 
-        double discountPercentage = loyaltyService.getOrCreateLoyalty(
-                createRiderProxy(userId)
-        ).getDiscountPercentage();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+        
+        boolean isOperator = user instanceof Operator;
+        double loyaltyDiscountPercentage = loyaltyService.getOrCreateLoyalty(user).getDiscountPercentage();
 
         StringBuilder breakdown = new StringBuilder();
         breakdown.append(String.format("Bike Type: %s\n", plan.getBikeType()));
@@ -52,11 +66,22 @@ public class BillingService {
                 durationMinutes, ratePerMinute, timeCost));
         breakdown.append(String.format("Subtotal: $%.2f CAD\n", totalBeforeDiscount));
 
-        if (discountPercentage > 0) {
-            BigDecimal discountAmount = totalBeforeDiscount.subtract(BigDecimal.valueOf(finalCost))
+        BigDecimal costAfterLoyalty = totalBeforeDiscount;
+        if (loyaltyDiscountPercentage > 0) {
+            costAfterLoyalty = totalBeforeDiscount.multiply(BigDecimal.valueOf(1 - loyaltyDiscountPercentage))
                     .setScale(2, RoundingMode.HALF_UP);
+            BigDecimal loyaltyDiscountAmount = totalBeforeDiscount.subtract(costAfterLoyalty);
             breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
-                    discountPercentage * 100, discountAmount));
+                    loyaltyDiscountPercentage * 100, loyaltyDiscountAmount));
+        }
+
+        if (isOperator) {
+            BigDecimal costBeforeOperatorDiscount = costAfterLoyalty;
+            BigDecimal operatorDiscountAmount = costBeforeOperatorDiscount
+                    .multiply(BigDecimal.valueOf(OPERATOR_DISCOUNT_PERCENTAGE))
+                    .setScale(2, RoundingMode.HALF_UP);
+            breakdown.append(String.format("Operator discount (%.0f%%): -$%.2f CAD\n",
+                    OPERATOR_DISCOUNT_PERCENTAGE * 100, operatorDiscountAmount));
         }
 
         breakdown.append(String.format("Final cost: $%.2f CAD", finalCost));
@@ -72,9 +97,4 @@ public class BillingService {
         ridesRepository.save(ride);
     }
 
-    private com.hexpedal.backend.model.Rider createRiderProxy(Long userId) {
-        com.hexpedal.backend.model.Rider rider = new com.hexpedal.backend.model.Rider();
-        rider.setId(userId);
-        return rider;
-    }
 }

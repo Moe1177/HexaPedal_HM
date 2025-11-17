@@ -2,7 +2,6 @@ package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.dto.BillingHistoryDto;
 import com.hexpedal.backend.dto.TripSummaryDto;
-import com.hexpedal.backend.model.Rider;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.RidesRepository;
@@ -31,14 +30,10 @@ public class BillingController {
 
 
     @GetMapping("/trip/{rideId}")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getTripSummary(
             @AuthenticationPrincipal User user,
             @PathVariable Integer rideId) {
-
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can view billing information");
-        }
 
         Rides ride = ridesRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
@@ -60,12 +55,8 @@ public class BillingController {
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getBillingHistory(@AuthenticationPrincipal User user) {
-
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can view billing history");
-        }
 
         List<Rides> rides = ridesRepository.findByUserId(Math.toIntExact(user.getId()));
 
@@ -77,14 +68,10 @@ public class BillingController {
     }
 
     @PostMapping("/calculate-trip-cost")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> calculateTripCost(
             @AuthenticationPrincipal User user,
             @RequestParam Integer rideId) {
-
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can calculate trip costs");
-        }
 
         Rides ride = ridesRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));

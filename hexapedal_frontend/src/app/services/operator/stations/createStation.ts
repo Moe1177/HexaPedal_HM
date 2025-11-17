@@ -18,10 +18,23 @@ export async function createStation(
   });
 
   if (!response.ok) {
-    const errorText = await response
-      .text()
-      .catch(() => "Failed to create station");
-    throw new Error(errorText || "Failed to create station");
+    let errorMessage = "Failed to create station";
+    try {
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || JSON.stringify(errorData) || errorMessage;
+      } else {
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+      }
+    } catch (e) {
+      errorMessage = response.statusText || errorMessage;
+      if (response.status === 409) {
+        errorMessage = "A station with this name or at these coordinates already exists.";
+      }
+    }
+    throw new Error(errorMessage);
   }
 
   const data: DockingStation = await response.json();

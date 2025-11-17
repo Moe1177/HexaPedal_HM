@@ -5,6 +5,8 @@ import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
+import com.hexpedal.backend.repository.PaymentMethodRepository;
+import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import java.util.Objects;
 import java.time.ZoneId;
 import java.time.Instant;
@@ -37,11 +39,18 @@ public class ReservationService {
     private final PaymentService paymentService;
     private final LoyaltyService loyaltyService;
     private final ReservationHistoryRepository reservationHistoryRepo;
+    private final PaymentMethodRepository paymentMethodRepo;
+    private final UserSubscriptionRepository userSubscriptionRepo;
 
     public void reserveBike(String email, Integer bikeId) {
    
         var user = userRepo.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
-
+        boolean hasActiveSubscription = userSubscriptionRepo.hasActiveSubscription(user.getId());
+        boolean hasDefaultPaymentMethod = paymentMethodRepo.findByUserIdAndDefaultMethodTrue(user.getId()).isPresent();
+        
+        if (!hasActiveSubscription && !hasDefaultPaymentMethod) {
+            throw new IllegalStateException("Cannot reserve a bike. Please add a payment method or subscribe to a plan first.");
+        }
 
         if (bikeRepo.existsByCurrentUserAndBikeStatus(user, BikeStatus.reserved)) {
             throw new IllegalStateException("User already has a reserved bike.");
@@ -123,6 +132,14 @@ public class ReservationService {
                 }
     
         var user = bike.getCurrentUser();
+        
+   
+        boolean hasActiveSubscription = userSubscriptionRepo.hasActiveSubscription(user.getId());
+        boolean hasDefaultPaymentMethod = paymentMethodRepo.findByUserIdAndDefaultMethodTrue(user.getId()).isPresent();
+        
+        if (!hasActiveSubscription && !hasDefaultPaymentMethod) {
+            throw new IllegalStateException("Cannot start a trip. Please add a payment method or subscribe to a plan first.");
+        }
     
         // Update reservation history to CLAIMED
         reservationHistoryRepo.findMostRecentPendingReservation(user.getId(), bikeId)

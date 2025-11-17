@@ -19,8 +19,8 @@ public class RiderLoyalty {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "rider_id", unique = true, nullable = false)
-    private Rider rider;
+    @JoinColumn(name = "user_id", unique = true, nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

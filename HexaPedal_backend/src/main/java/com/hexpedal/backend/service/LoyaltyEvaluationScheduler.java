@@ -35,7 +35,7 @@ public class LoyaltyEvaluationScheduler {
         for (RiderLoyalty loyalty : allLoyalties) {
             try {
                 var previousTier = loyalty.getCurrentTier();
-                loyaltyService.evaluateTier(loyalty.getRider().getId());
+                loyaltyService.evaluateTier(loyalty.getUser().getId());
 
                 loyalty = loyaltyRepo.findById(loyalty.getId()).orElse(loyalty);
 
@@ -47,8 +47,8 @@ public class LoyaltyEvaluationScheduler {
                     unchanged++;
                 }
             } catch (Exception e) {
-                System.err.println("Failed to evaluate tier for rider " +
-                        loyalty.getRider().getId() + ": " + e.getMessage());
+                System.err.println("Failed to evaluate tier for user " +
+                        loyalty.getUser().getId() + ": " + e.getMessage());
             }
         }
 
