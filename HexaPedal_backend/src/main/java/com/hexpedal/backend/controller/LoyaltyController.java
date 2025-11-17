@@ -42,9 +42,13 @@ public class LoyaltyController {
 
     @PostMapping("/evaluate")
     @PreAuthorize("hasRole('RIDER')")
-    public ResponseEntity<LoyaltyStatusDto> evaluateTier(@PathVariable Long userId) {
-        RiderLoyalty loyalty = loyaltyService.evaluateTier(userId);
-        TierProgressDto progress = loyaltyService.calculateTierProgress(userId);
+    public ResponseEntity<LoyaltyStatusDto> evaluateTier(Authentication authentication) {
+        String email = authentication.getName();
+        var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        RiderLoyalty loyalty = loyaltyService.evaluateTier(user.getId());
+        TierProgressDto progress = loyaltyService.calculateTierProgress(user.getId());
         return ResponseEntity.ok(LoyaltyStatusDto.from(loyalty, progress));
     }
 
@@ -68,13 +72,4 @@ public class LoyaltyController {
         loyaltyService.markNotificationShown(user.getId());
         return ResponseEntity.ok().build();
     }
-
-//    private TierProgressDto calculateProgress(RiderLoyalty loyalty) {
-//        return new TierProgressDto(
-//                null, // nextTier
-//                null, // nextTierName
-//                false, // canUpgrade
-//                java.util.List.of() // missingCriteria
-//        );
-//    }
 }

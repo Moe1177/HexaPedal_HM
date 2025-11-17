@@ -43,9 +43,11 @@ public class ReservationController {
     
 
     @PostMapping("/trips/{bikeId}/start")
-    public ResponseEntity<Void> startTrip(@PathVariable Integer bikeId) {
+    public ResponseEntity<Void> startTrip(
+            @PathVariable Integer bikeId,
+            @RequestBody(required = false) java.util.Map<String, Object> destinationData) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        reservationService.startTrip(bikeId, email);
+        reservationService.startTrip(bikeId, email, destinationData);
         return ResponseEntity.noContent().build();
     }
 
@@ -74,6 +76,20 @@ public class ReservationController {
          reservationService.endGuestTrip(bikeId, stationId);
          return ResponseEntity.noContent().build();
      }
+
+    @GetMapping("/reservations/current")
+    public ResponseEntity<com.hexpedal.backend.dto.UserReservationStatusDTO> getCurrentReservation() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        com.hexpedal.backend.dto.UserReservationStatusDTO status = reservationService.getCurrentUserReservation(email);
+        return ResponseEntity.ok(status);
+    }
+
+    @GetMapping("/trips/current")
+    public ResponseEntity<com.hexpedal.backend.dto.UserActiveTripDTO> getCurrentTrip() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        com.hexpedal.backend.dto.UserActiveTripDTO trip = reservationService.getCurrentUserTrip(email);
+        return ResponseEntity.ok(trip);
+    }
 
     @PostMapping("/reservations/expire")
     public ResponseEntity<Void> expireReservations() {

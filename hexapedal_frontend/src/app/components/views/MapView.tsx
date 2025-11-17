@@ -1,5 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import MapServer from "../ui/map/MapServer";
+import { RouteCoordinate } from "@/app/services/routing/getRoute";
 
 interface MapViewProps {
     onBikeReserved?: (bikeId: number) => void;
@@ -7,6 +8,7 @@ interface MapViewProps {
     onEditState?: (stationId: number) => void;
     onEditPosition?: (stationId: number) => void;
     onDelete?: (stationId: number) => void;
+    routeCoordinates?: RouteCoordinate[];
 }
 
 export default function MapView({ 
@@ -14,7 +16,8 @@ export default function MapView({
     isOperatorView = false,
     onEditState,
     onEditPosition,
-    onDelete
+    onDelete,
+    routeCoordinates
 }: MapViewProps = {}) {
     return (
         <MapServer 
@@ -23,6 +26,7 @@ export default function MapView({
             onEditState={onEditState}
             onEditPosition={onEditPosition}
             onDelete={onDelete}
+            routeCoordinates={routeCoordinates}
         />
     );
 }

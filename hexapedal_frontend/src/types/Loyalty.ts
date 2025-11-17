@@ -11,8 +11,7 @@ export interface CriteriaStatus {
   criteriaId: string;
   description: string;
   met: boolean;
-  currentValue: string;
-  requiredValue: string;
+  progressDetail: string;
 }
 
 export interface TierProgress {

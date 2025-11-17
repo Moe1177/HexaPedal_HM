@@ -27,6 +27,12 @@ public class Bike {
     private LocalDateTime tripStartTime;
 
     private String tripStartStationName;
+    
+    // Destination information for navigation
+    private String tripDestinationStationName;
+    private Long tripDestinationStationId;
+    private Double tripDestinationLatitude;
+    private Double tripDestinationLongitude;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -64,7 +70,34 @@ public class Bike {
     public void setTripStartStationName(String tripStartStationName) { 
         this.tripStartStationName = tripStartStationName; 
     }
-
+    
+    public String getTripDestinationStationName() {
+        return tripDestinationStationName;
+    }
+    public void setTripDestinationStationName(String tripDestinationStationName) {
+        this.tripDestinationStationName = tripDestinationStationName;
+    }
+    
+    public Long getTripDestinationStationId() {
+        return tripDestinationStationId;
+    }
+    public void setTripDestinationStationId(Long tripDestinationStationId) {
+        this.tripDestinationStationId = tripDestinationStationId;
+    }
+    
+    public Double getTripDestinationLatitude() {
+        return tripDestinationLatitude;
+    }
+    public void setTripDestinationLatitude(Double tripDestinationLatitude) {
+        this.tripDestinationLatitude = tripDestinationLatitude;
+    }
+    
+    public Double getTripDestinationLongitude() {
+        return tripDestinationLongitude;
+    }
+    public void setTripDestinationLongitude(Double tripDestinationLongitude) {
+        this.tripDestinationLongitude = tripDestinationLongitude;
+    }
 
     public void setId(int id) {
         this.id = id;

@@ -3,9 +3,9 @@ package com.hexpedal.backend.service;
 import com.hexpedal.backend.dto.CriteriaStatusDto;
 import com.hexpedal.backend.dto.TierProgressDto;
 import com.hexpedal.backend.model.*;
-import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.RiderLoyaltyRepository;
 import com.hexpedal.backend.repository.RidesRepository;
+import com.hexpedal.backend.repository.ReservationHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ public class LoyaltyService {
 
     private final RiderLoyaltyRepository loyaltyRepo;
     private final RidesRepository ridesRepo;
-    private final BikeRepository bikeRepo;
+    private final ReservationHistoryRepository reservationHistoryRepo;
 
     @Transactional
     public RiderLoyalty getOrCreateLoyalty(Rider rider) {
@@ -107,6 +107,9 @@ public class LoyaltyService {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
         switch (targetTier) {
+            case NONE -> {
+                // No criteria for NONE tier
+            }
             case BRONZE -> criteria.addAll(checkBronzeCriteria(loyalty));
             case SILVER -> {
                 criteria.addAll(checkBronzeCriteria(loyalty));
@@ -342,6 +345,7 @@ public class LoyaltyService {
     private void updateStatistics(RiderLoyalty loyalty, Long riderId) {
         Instant oneYearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
 
+        // Update trip statistics from Rides table
         List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(riderId));
         List<Rides> ridesLastYear = allRides.stream()
                 .filter(r -> r.getStartTimestamp().isAfter(oneYearAgo))
@@ -349,32 +353,18 @@ public class LoyaltyService {
 
         loyalty.setTotalTrips(allRides.size());
         loyalty.setTripsLastYear(ridesLastYear.size());
+        
+        // BR-002: Assume all completed rides are successful returns (design decision 1c)
         loyalty.setTotalSuccessfulReturns(allRides.size());
 
-        // Count missed reservations (bikes that were reserved but never used)
-        List<Bike> allBikesReservedByUser = bikeRepo.findAll().stream()
-                .filter(b -> b.getCurrentUser() != null && b.getCurrentUser().getId() == riderId)
-                .toList();
+        // Update reservation statistics from ReservationHistory table
+        // BR-001: Count expired reservations in the last year
+        long missedReservations = reservationHistoryRepo.countExpiredReservationsLastYear(riderId, oneYearAgo);
+        loyalty.setMissedReservationsLastYear((int) missedReservations);
 
-        int missedCount = 0;
-        for (Bike bike : allBikesReservedByUser) {
-            if (bike.isReservationExpired() && bike.getBikeStatus() == BikeStatus.reserved) {
-                LocalDateTime reservationTime = LocalDateTime.of(
-                        bike.getReservationExpDate(),
-                        bike.getReservationExpTime()
-                );
-                if (reservationTime.isAfter(LocalDateTime.now().minusYears(1))) {
-                    missedCount++;
-                }
-            }
-        }
-        loyalty.setMissedReservationsLastYear(missedCount);
-
-        // Count successful claimed reservations (reservations that led to trips)
-        int successfulClaimed = (int) ridesLastYear.stream()
-                .filter(r -> r.getBike() != null)
-                .count();
-        loyalty.setSuccessfulClaimedReservationsLastYear(successfulClaimed);
+        // SL-002: Count claimed reservations in the last year
+        long claimedReservations = reservationHistoryRepo.countClaimedReservationsLastYear(riderId, oneYearAgo);
+        loyalty.setSuccessfulClaimedReservationsLastYear((int) claimedReservations);
     }
 
     private LoyaltyTier calculateTier(RiderLoyalty loyalty, Long riderId) {
