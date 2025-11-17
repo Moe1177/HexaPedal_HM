@@ -7,6 +7,8 @@ import { MAP_CONFIG } from '@/app/services/utils/constants';
 import { useMapEntities } from '@/hooks/useMapEntities';
 import EntityMarker from '../EntityMarker';
 import StationDetailsModal from '../StationDetailsModal';
+import RoutePolyline from './RoutePolyline';
+import { RouteCoordinate } from '@/app/services/routing/getRoute';
 
 interface MapClientProps {
     onBikeReserved?: (bikeId: number) => void;
@@ -14,6 +16,7 @@ interface MapClientProps {
     onEditState?: (stationId: number) => void;
     onEditPosition?: (stationId: number) => void;
     onDelete?: (stationId: number) => void;
+    routeCoordinates?: RouteCoordinate[];
 }
 
 export default function MapClient({ 
@@ -21,7 +24,8 @@ export default function MapClient({
     isOperatorView = false,
     onEditState,
     onEditPosition,
-    onDelete
+    onDelete,
+    routeCoordinates
 }: MapClientProps = {}) {
     const { entities } = useMapEntities();
     const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
@@ -79,6 +83,9 @@ export default function MapClient({
                         onDelete={onDelete}
                     />
                 ))}
+                {routeCoordinates && routeCoordinates.length > 0 && (
+                    <RoutePolyline key="navigation-route" coordinates={routeCoordinates} />
+                )}
             </MapContainer>
             {!isOperatorView && (
                 <StationDetailsModal

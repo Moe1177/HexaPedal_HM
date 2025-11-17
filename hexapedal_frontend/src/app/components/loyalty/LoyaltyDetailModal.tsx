@@ -163,6 +163,68 @@ export default function LoyaltyDetailModal({ loyaltyStatus, onClose }: LoyaltyDe
             </div>
           </div>
 
+          {/* Tier Requirements */}
+          {loyaltyStatus.progress && loyaltyStatus.progress.missingCriteria && loyaltyStatus.progress.missingCriteria.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
+                {tier === LoyaltyTier.GOLD 
+                  ? "Requirements to Maintain Gold Tier" 
+                  : `Requirements for ${loyaltyStatus.progress.nextTierName || "Next"} Tier`}
+              </h3>
+              <div className="space-y-2">
+                {loyaltyStatus.progress.missingCriteria.map((criteria, index) => (
+                  <div 
+                    key={index}
+                    className={`p-3 rounded-lg border ${
+                      criteria.met 
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" 
+                        : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl flex-shrink-0">
+                        {criteria.met ? "✓" : "✗"}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className={`text-sm font-medium ${
+                            criteria.met 
+                              ? "text-emerald-900 dark:text-emerald-100" 
+                              : "text-amber-900 dark:text-amber-100"
+                          }`}>
+                            {criteria.description}
+                          </p>
+                          <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                            criteria.met
+                              ? "bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100"
+                              : "bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100"
+                          }`}>
+                            {criteria.criteriaId}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-1 ${
+                          criteria.met 
+                            ? "text-emerald-600 dark:text-emerald-400" 
+                            : "text-amber-600 dark:text-amber-400"
+                        }`}>
+                          {criteria.progressDetail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {loyaltyStatus.progress.canUpgrade && (
+                <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <span className="text-lg">🎉</span>
+                    You've met all requirements! Your tier will be updated on your next evaluation.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Progress to Next Tier */}
           {tier !== LoyaltyTier.GOLD && (
             <div>

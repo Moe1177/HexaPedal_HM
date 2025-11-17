@@ -9,11 +9,30 @@ import TruckManagement from "@/app/components/operator/TruckManagement";
 import { MapEntitiesProvider } from "@/app/providers/MapEntitiesProvider";
 import { useMapEntities } from "@/hooks/useMapEntities";
 import { DockingStation } from "@/types/DockingStation";
+import { connectToWebSocket, disconnectWebSocket } from "@/app/services/utils/webSocket";
 
 function OperatorDashboardContent() {
   const [activeView, setActiveView] = useState<"map" | "stations" | "bikes" | "trucks">("map");
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
+
+  // Connect to WebSocket for real-time updates
+  useEffect(() => {
+    console.log("[Operator Dashboard] 🔌 Connecting to WebSocket...");
+    
+    connectToWebSocket((message) => {
+      console.log("[Operator Dashboard] 📨 WebSocket update received:", message);
+      console.log("[Operator Dashboard] 🔄 Reloading map entities...");
+      reloadEntities().then(() => {
+        console.log("[Operator Dashboard] ✅ Map entities reloaded successfully");
+      });
+    });
+
+    return () => {
+      console.log("[Operator Dashboard] 🔌 Disconnecting from WebSocket");
+      disconnectWebSocket();
+    };
+  }, [reloadEntities]);
 
   // Reload map entities whenever switching to map view
   useEffect(() => {

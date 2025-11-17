@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { RouteCoordinate } from '@/app/services/routing/getRoute';
 
 const MapClient = dynamic(() => import('./MapClient'), { ssr: false });
 
@@ -10,6 +11,7 @@ interface MapServerProps {
     onEditState?: (stationId: number) => void;
     onEditPosition?: (stationId: number) => void;
     onDelete?: (stationId: number) => void;
+    routeCoordinates?: RouteCoordinate[];
 }
 
 export default function MapServer({ 
@@ -17,7 +19,8 @@ export default function MapServer({
     isOperatorView = false,
     onEditState,
     onEditPosition,
-    onDelete
+    onDelete,
+    routeCoordinates
 }: MapServerProps = {}) {
     return (
         <MapClient 
@@ -26,6 +29,7 @@ export default function MapServer({
             onEditState={onEditState}
             onEditPosition={onEditPosition}
             onDelete={onDelete}
+            routeCoordinates={routeCoordinates}
         />
     );
 }
