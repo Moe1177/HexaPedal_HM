@@ -6,6 +6,7 @@ import com.hexpedal.backend.model.*;
 import com.hexpedal.backend.repository.RiderLoyaltyRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.ReservationHistoryRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,8 +41,6 @@ public class LoyaltyService {
 
     @Transactional
     public RiderLoyalty evaluateTier(Long riderId) {
-        Rider rider = new Rider();
-        rider.setId(riderId);
 
         RiderLoyalty loyalty = getOrCreateLoyalty(rider);
 
