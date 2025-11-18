@@ -4,6 +4,7 @@ import com.hexpedal.backend.dto.CriteriaStatusDto;
 import com.hexpedal.backend.dto.TierProgressDto;
 import com.hexpedal.backend.model.*;
 import com.hexpedal.backend.repository.RiderLoyaltyRepository;
+import com.hexpedal.backend.repository.RiderRepository;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.ReservationHistoryRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,6 +26,7 @@ public class LoyaltyService {
     private final RiderLoyaltyRepository loyaltyRepo;
     private final RidesRepository ridesRepo;
     private final ReservationHistoryRepository reservationHistoryRepo;
+    private final RiderRepository riderRepo;
 
     @Transactional
     public RiderLoyalty getOrCreateLoyalty(Rider rider) {
@@ -41,6 +43,9 @@ public class LoyaltyService {
 
     @Transactional
     public RiderLoyalty evaluateTier(Long riderId) {
+
+        Rider rider = riderRepo.findById(riderId)
+                .orElseThrow(() -> new EntityNotFoundException("Rider not found: " + riderId));
 
         RiderLoyalty loyalty = getOrCreateLoyalty(rider);
 
@@ -64,8 +69,8 @@ public class LoyaltyService {
 
     @Transactional
     public TierProgressDto calculateTierProgress(Long riderId) {
-        Rider rider = new Rider();
-        rider.setId(riderId);
+        Rider rider = riderRepo.findById(riderId)
+                .orElseThrow(() -> new EntityNotFoundException("Rider not found: " + riderId));
 
         RiderLoyalty loyalty = getOrCreateLoyalty(rider);
         updateStatistics(loyalty, riderId);
