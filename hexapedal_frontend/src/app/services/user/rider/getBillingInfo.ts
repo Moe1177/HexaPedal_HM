@@ -12,7 +12,8 @@ interface BillingHistoryDto {
   arrivalStation: string;
   distance: number;
   duration: number;
-  cost: number;
+  cost: number; // This is already the final cost after flex dollars
+  flexDollarsUsed: number;
 }
 
 export async function getBillingInfo(token?: string | null): Promise<BillingSummary> {
@@ -60,11 +61,12 @@ export async function getBillingInfo(token?: string | null): Promise<BillingSumm
   }).length;
 
   // Map rides to billing history format
+  // The cost from backend is already the final cost after flex dollars are applied
   const billingHistory: BillingHistory[] = rides.map((ride, index) => ({
     id: ride.rideId || index + 1,
     date: ride.startDateTime,
-    description: `Ride #${ride.rideId}${ride.originStation ? ` from ${ride.originStation}` : ""}${ride.arrivalStation ? ` to ${ride.arrivalStation}` : ""}`,
-    amount: ride.cost || 0,
+    description: `Ride #${ride.rideId}${ride.originStation ? ` from ${ride.originStation}` : ""}${ride.arrivalStation ? ` to ${ride.arrivalStation}` : ""}${ride.flexDollarsUsed > 0 ? ` (${ride.flexDollarsUsed} flex dollars used)` : ""}`,
+    amount: ride.cost || 0, // Already the final cost after flex dollars
     currency: "CAD",
     status: "paid" as const,
     type: "ride" as const,

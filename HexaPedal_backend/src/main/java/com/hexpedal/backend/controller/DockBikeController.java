@@ -40,14 +40,25 @@ public class DockBikeController {
         DockingStation freshStation = stationRepo.findById(stationId).orElse(null);
         if (freshStation == null) return;
         
-        // Find and update the cached instance
-        for (MapEntity entity : Map.getInstance().getMapEntities()) {
+        // Force load docks to get accurate bike count
+        if (freshStation.getDocks() != null) {
+            freshStation.getDocks().size();
+        }
+        
+        // Find and replace the cached instance entirely to ensure bike count is correct
+        java.util.List<MapEntity> entities = Map.getInstance().getMapEntities();
+        for (int i = 0; i < entities.size(); i++) {
+            MapEntity entity = entities.get(i);
             if (entity instanceof DockingStation) {
                 DockingStation cachedStation = (DockingStation) entity;
                 if (cachedStation.getId().equals(stationId)) {
-                    // Update with fresh data (especially bike count)
-                    cachedStation.setStatus(freshStation.getStatus());
-                    // Trigger notification - setStatus calls notifyListeners()
+                    // Copy listeners from old cached station to fresh station
+                    freshStation.copyListenersFrom(cachedStation);
+                    // Replace the cached station with fresh data
+                    entities.set(i, freshStation);
+                    // Trigger WebSocket notification with fresh data using the setStatus trick
+                    freshStation.setStatus(freshStation.getStatus());
+                    System.out.println("Updated cached station " + stationId + " with " + freshStation.getNumberOfBikesDocked() + " bikes");
                     break;
                 }
             }

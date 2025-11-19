@@ -6,7 +6,7 @@ import com.hexpedal.backend.model.DockingStationStates;
 import com.hexpedal.backend.model.Map;
 import com.hexpedal.backend.model.MapEntity;
 import com.hexpedal.backend.repository.DockingStationRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +14,14 @@ import java.util.List;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-@RequiredArgsConstructor
 public class DockingStationService {
     private final DockingStationRepository stationRepo;
+    private final MapService mapService;
+
+    public DockingStationService(DockingStationRepository stationRepo, @Lazy MapService mapService) {
+        this.stationRepo = stationRepo;
+        this.mapService = mapService;
+    }
     
     /**
      * Find the cached station instance and update it with fresh data, then trigger WebSocket notification
@@ -113,14 +118,23 @@ public class DockingStationService {
         return stations;
     }
 
+    @Transactional
     public void deleteStation(long stationId) {
         DockingStation s = stationRepo.findById(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+        
+        // Force load docks collection to avoid lazy loading issues
+        if (s.getDocks() != null) {
+            s.getDocks().size();
+        }
+        
         boolean hasBike = s.getDocks() != null && s.getDocks().stream().anyMatch(d -> d.getBike() != null);
         if (hasBike) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cannot delete station with bikes docked.");
         }
         stationRepo.delete(s);
+        // Remove from map cache
+        mapService.removeStationFromMap(stationId);
     }
 
     public DockingStation create(CreateStationRequestDTO req) {
@@ -134,7 +148,10 @@ public class DockingStationService {
                 req.address(),
                 req.bikeCapacity()
         );
-        return stationRepo.save(station);
+        DockingStation saved = stationRepo.save(station);
+        // Add to map cache
+        mapService.addStationToMap(saved);
+        return saved;
     }
 
     public DockingStation getStation(long stationId) {

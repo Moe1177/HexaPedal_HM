@@ -248,27 +248,30 @@ function OperatorDashboardContent() {
                 onDelete={handleDelete}
               />
 
-              <div className="absolute top-4 right-4 z-[1000]">
-                <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl rounded-2xl shadow-xl p-5 border border-neutral-200/60 dark:border-neutral-800">
-                  <h4 className="font-semibold mb-3 text-neutral-900 dark:text-neutral-100">
-                    Map Legend
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                      <span className="text-neutral-700 dark:text-neutral-300">Active</span>
+              <div className="absolute bottom-6 left-6 z-[1000]">
+                <div className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-xl rounded-xl shadow-xl p-4 border border-neutral-200/60 dark:border-neutral-700 max-w-xs">
+                  <h3 className="text-sm font-bold mb-3 text-neutral-900 dark:text-neutral-100">Station Capacity</h3>
+                  <div className="space-y-2.5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Balanced</div>
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400">25% - 85% full</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-sky-500"></div>
-                      <span className="text-neutral-700 dark:text-neutral-300">Full</span>
+                    <div className="flex items-start gap-3">
+                      <div className="w-4 h-4 bg-yellow-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Almost Empty or Full</div>
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400">&lt;25% or &gt;85% full</div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-neutral-500"></div>
-                      <span className="text-neutral-700 dark:text-neutral-300">Empty</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span className="text-neutral-700 dark:text-neutral-300">Out of Service</span>
+                    <div className="flex items-start gap-3">
+                      <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Empty or Full</div>
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400">0% or 100% full</div>
+                      </div>
                     </div>
                   </div>
                 </div>

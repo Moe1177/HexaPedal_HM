@@ -227,6 +227,7 @@ public class ReservationService {
         }
 
         // create and save ride (R-PRC-04: maintain log of all trips and charges)
+        // Save the final cost (after flex dollars) as this is what the user actually paid
         Rides ride = new Rides();
         ride.setUser(user);
         ride.setBike(bike);
@@ -236,7 +237,7 @@ public class ReservationService {
         ride.setEndTimestamp(endTs);
         ride.setDuration(durationMinutes);
         ride.setDistance(distanceKm);
-        ride.setCost(cost);
+        ride.setCost(finalCostToCharge); // Save final cost after flex dollars
         ride.setFlexDollarsUsed(flexDollarsUsed);
         ridesRepo.save(ride);
 
