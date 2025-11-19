@@ -20,7 +20,6 @@ public class FlexDollarService {
             throw new RuntimeException("User is not a Rider (Operators cannot earn flex dollars)");
         }
 
-        // flexDollars is a field in User entity
         Integer currentFlexDollars = user.getFlexDollars();
         if (currentFlexDollars == null) {
             currentFlexDollars = 0;
@@ -38,11 +37,6 @@ public class FlexDollarService {
         return addFlexDollars(user, amount);
     }
 
-    /**
-     * Get available flex dollars for a user
-     * @param userId The user ID
-     * @return The number of flex dollars available
-     */
     public int getAvailableFlexDollars(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -50,12 +44,7 @@ public class FlexDollarService {
         return flexDollars != null ? flexDollars : 0;
     }
 
-    /**
-     * Deduct flex dollars from a user
-     * @param userId The user ID
-     * @param amount The amount to deduct
-     * @return The actual amount deducted (may be less than requested if insufficient balance)
-     */
+
     @Transactional
     public int deductFlexDollars(Long userId, int amount) {
         User user = userRepository.findById(userId)
@@ -66,7 +55,7 @@ public class FlexDollarService {
             currentFlexDollars = 0;
         }
 
-        // Deduct only what's available
+        // Deduct what's available only
         int amountToDeduct = Math.min(amount, currentFlexDollars);
         user.setFlexDollars(currentFlexDollars - amountToDeduct);
         userRepository.save(user);
@@ -78,12 +67,6 @@ public class FlexDollarService {
         return amountToDeduct;
     }
 
-    /**
-     * Apply flex dollars to a trip cost and return the final amount to charge
-     * @param userId The user ID
-     * @param tripCostDollars The trip cost in dollars (e.g., 2.50 for $2.50)
-     * @return AppliedFlexDollarsResult containing flex dollars used and final cost to charge
-     */
     @Transactional
     public AppliedFlexDollarsResult applyFlexDollarsToTrip(Long userId, double tripCostDollars) {
         // Convert trip cost to cents (1 flex dollar = 1 cent)
@@ -92,24 +75,22 @@ public class FlexDollarService {
         // Get available flex dollars
         int availableFlexDollars = getAvailableFlexDollars(userId);
 
-        // Calculate how many flex dollars to use (minimum of available and needed)
+        // Calculate how many flex dollars to be used
         int flexDollarsToUse = Math.min(availableFlexDollars, tripCostCents);
 
-        // Deduct the flex dollars
+        // Deduct flex dollars
         int actuallyDeducted = deductFlexDollars(userId, flexDollarsToUse);
 
-        // Calculate final cost to charge
+        // Calculate final cost
         double finalCost = tripCostDollars - (actuallyDeducted / 100.0);
 
-        // Ensure no negative costs due to rounding
+        // Ensure no negative costs
         finalCost = Math.max(0, finalCost);
 
         return new AppliedFlexDollarsResult(actuallyDeducted, finalCost);
     }
 
-    /**
-     * Result of applying flex dollars to a trip
-     */
+
     public static class AppliedFlexDollarsResult {
         private final int flexDollarsUsed;
         private final double finalCostToCharge;
