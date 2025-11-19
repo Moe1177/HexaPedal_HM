@@ -3,7 +3,9 @@ import { API_BASE_URL } from "./constants";
 
 export async function loadMapEntities() {
     const baseUrl = API_BASE_URL;
-    const res = await fetch(`${baseUrl}/api/map/init-map-entities`);
+    // Add timestamp to prevent caching
+    const timestamp = new Date().getTime();
+    const res = await fetch(`${baseUrl}/api/map/init-map-entities?_t=${timestamp}`);
     if (!res.ok) {
         throw new Error(`Failed to fetch station markers: ${res.statusText}`);
     }

@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { PricingPlan } from "@/types/Billing";
 import { getPricingPlans } from "@/app/services/pricing/getPricingPlans";
-import { createCheckoutSession } from "@/app/services/subscriptions/createCheckoutSession";
-import { useAuth } from "@/hooks/useAuth";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const { token } = useAuth();
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [checkoutLoading, setCheckoutLoading] = useState<number | null>(null);
 
   useEffect(() => {
     loadPricingPlans();
@@ -29,29 +23,6 @@ export default function LandingPage() {
       setPricingPlans([]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGetStarted = async (planId: number) => {
-    const plan = pricingPlans.find((p) => p.id === planId);
-    if (!plan) return;
-
-    // Check if user is authenticated
-    if (!token) {
-      // Redirect to signup
-      router.push("/dashboard/signup");
-      return;
-    }
-
-    // Create checkout session and redirect to Stripe
-    setCheckoutLoading(planId);
-    try {
-      const checkoutUrl = await createCheckoutSession(plan.planType, token);
-      window.location.href = checkoutUrl;
-    } catch (error) {
-      console.error("Failed to create checkout session:", error);
-      alert("Failed to start checkout. Please try again.");
-      setCheckoutLoading(null);
     }
   };
 
@@ -82,54 +53,62 @@ export default function LandingPage() {
     }
   };
 
-  const getPlanIcon = (planType: string) => {
+  const getBikeImage = (planType: string) => {
     switch (planType) {
       case "PAY_PER_TRIP":
         return (
           <svg
-            className="w-6 h-6 text-blue-600 dark:text-blue-400"
+            className="w-full h-48"
+            viewBox="0 0 200 120"
             fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
-            />
+            <circle cx="50" cy="90" r="25" stroke="#4F46E5" strokeWidth="4" fill="none"/>
+            <circle cx="150" cy="90" r="25" stroke="#4F46E5" strokeWidth="4" fill="none"/>
+            <path d="M50 90 L80 50 L90 50 L110 90" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M90 50 L120 30 L130 35" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M110 90 L150 90" stroke="#4F46E5" strokeWidth="4" strokeLinecap="round"/>
+            <circle cx="95" cy="50" r="3" fill="#4F46E5"/>
+            <text x="100" y="15" fill="#4F46E5" fontSize="12" fontWeight="bold">Standard Bike</text>
           </svg>
         );
       case "MONTHLY":
         return (
           <svg
-            className="w-6 h-6 text-green-600 dark:text-green-400"
+            className="w-full h-48"
+            viewBox="0 0 200 120"
             fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
+            <circle cx="50" cy="90" r="25" stroke="#10B981" strokeWidth="4" fill="none"/>
+            <circle cx="150" cy="90" r="25" stroke="#10B981" strokeWidth="4" fill="none"/>
+            <path d="M50 90 L80 50 L90 50 L110 90" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M90 50 L120 30 L130 35" stroke="#10B981" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M110 90 L150 90" stroke="#10B981" strokeWidth="4" strokeLinecap="round"/>
+            <rect x="75" y="55" width="20" height="12" fill="#10B981" rx="2"/>
+            <circle cx="95" cy="50" r="3" fill="#10B981"/>
+            <path d="M75 61 L70 61 L68 65" stroke="#10B981" strokeWidth="2" strokeLinecap="round"/>
+            <text x="90" y="15" fill="#10B981" fontSize="12" fontWeight="bold">Electric Bike</text>
           </svg>
         );
       case "YEARLY":
         return (
           <svg
-            className="w-6 h-6 text-purple-600 dark:text-purple-400"
+            className="w-full h-48"
+            viewBox="0 0 200 120"
             fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+            <circle cx="50" cy="90" r="25" stroke="#8B5CF6" strokeWidth="4" fill="none"/>
+            <circle cx="150" cy="90" r="25" stroke="#8B5CF6" strokeWidth="4" fill="none"/>
+            <path d="M50 90 L80 50 L90 50 L110 90" stroke="#8B5CF6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M90 50 L120 30 L130 35" stroke="#8B5CF6" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M110 90 L150 90" stroke="#8B5CF6" strokeWidth="4" strokeLinecap="round"/>
+            <rect x="75" y="55" width="22" height="14" fill="#8B5CF6" rx="3"/>
+            <circle cx="95" cy="50" r="3" fill="#8B5CF6"/>
+            <path d="M75 62 L70 62 L68 66" stroke="#8B5CF6" strokeWidth="2" strokeLinecap="round"/>
+            <path d="M84 60 L86 63 L83 63 L85 66" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <text x="75" y="15" fill="#8B5CF6" fontSize="12" fontWeight="bold">Premium Electric</text>
           </svg>
         );
       default:
@@ -137,51 +116,46 @@ export default function LandingPage() {
     }
   };
 
-  const getIconBgColor = (planType: string) => {
-    switch (planType) {
-      case "PAY_PER_TRIP":
-        return "bg-blue-100 dark:bg-blue-900";
-      case "MONTHLY":
-        return "bg-green-100 dark:bg-green-900";
-      case "YEARLY":
-        return "bg-purple-100 dark:bg-purple-900";
-      default:
-        return "bg-neutral-100 dark:bg-neutral-800";
-    }
-  };
-
-  const formatPrice = (plan: PricingPlan) => {
-    if (plan.planType === "PAY_PER_TRIP") {
-      return {
-        main: "$0.50",
-        sub: "+ $0.01/min",
-      };
-    } else if (plan.planType === "MONTHLY") {
-      return {
-        main: `$${plan.price.toFixed(2)}`,
-        sub: "/month",
-      };
-    } else if (plan.planType === "YEARLY") {
-      const monthlySavings = 12 * 12 - plan.price;
-      return {
-        main: `$${plan.price.toFixed(2)}`,
-        sub: "/year",
-        savings:
-          monthlySavings > 0
-            ? `Save $${monthlySavings.toFixed(0)} (${Math.round(
-                (monthlySavings / (12 * 12)) * 100
-              )}% off)`
-            : undefined,
-      };
-    }
-    return {
-      main: `$${plan.price.toFixed(2)}`,
-      sub: "",
-    };
-  };
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
-      <nav className="container mx-auto px-6 py-6 border-b border-neutral-100 dark:border-neutral-800">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 relative overflow-hidden">
+      {/* Falling Maple Leaves - Beautiful and Prominent */}
+      <div className="absolute top-60 left-1/4 opacity-40 dark:opacity-25 pointer-events-none animate-[fall_15s_linear_infinite]">
+        <svg width="45" height="45" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#ef4444"/>
+        </svg>
+      </div>
+
+      <div className="absolute top-40 left-[40%] opacity-35 dark:opacity-22 pointer-events-none animate-[fall_12s_linear_infinite_2s]">
+        <svg width="38" height="38" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#fbbf24"/>
+        </svg>
+      </div>
+
+      <div className="absolute top-50 right-1/3 opacity-40 dark:opacity-25 pointer-events-none animate-[fall_20s_linear_infinite_3s]">
+        <svg width="42" height="42" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#f59e0b"/>
+        </svg>
+      </div>
+
+      <div className="absolute top-35 left-[55%] opacity-35 dark:opacity-22 pointer-events-none animate-[fall_17s_linear_infinite_5s]">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#dc2626"/>
+        </svg>
+      </div>
+
+      <div className="absolute top-45 right-[40%] opacity-38 dark:opacity-24 pointer-events-none animate-[fall_14s_linear_infinite_7s]">
+        <svg width="36" height="36" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#ef4444"/>
+        </svg>
+      </div>
+
+      <div className="absolute top-55 left-[60%] opacity-36 dark:opacity-23 pointer-events-none animate-[fall_19s_linear_infinite_4s]">
+        <svg width="34" height="34" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#fbbf24"/>
+        </svg>
+      </div>
+
+      <nav className="container mx-auto px-6 py-6 border-b border-neutral-100 dark:border-neutral-800 relative z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-sky-500">
@@ -219,13 +193,13 @@ export default function LandingPage() {
           </div>
         </div>
       </nav>
-      <section className="container mx-auto px-6 py-20 md:py-32">
+      <section className="container mx-auto px-6 py-20 md:py-32 relative z-10">
         <div className="text-center max-w-4xl mx-auto mb-20">
           <h1 className="text-6xl md:text-7xl font-extrabold mb-6 bg-gradient-to-r from-indigo-600 via-sky-500 to-indigo-600 bg-clip-text text-transparent leading-tight tracking-tight">
             Ride Smart, Ride Green
           </h1>
           <p className="text-xl md:text-2xl text-neutral-600 dark:text-neutral-400 mb-8 font-light">
-            Affordable bike sharing passes for your daily commute and adventures
+            Choose from our fleet of standard and electric bikes for your daily commute and adventures
           </p>
         </div>
 
@@ -240,91 +214,67 @@ export default function LandingPage() {
             </p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {pricingPlans.map((plan, index) => {
-              const priceInfo = formatPrice(plan);
-              const features = getPlanFeatures(plan.planType);
-              const isPopular = plan.planType === "MONTHLY";
+          <div className="flex justify-center items-center">
+            <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto px-4">
+              {pricingPlans.map((plan, index) => {
+                const features = getPlanFeatures(plan.planType);
+                const isPopular = plan.planType === "MONTHLY";
 
-              return (
-                <div
-                  key={plan.id}
-                  className={`rounded-3xl shadow-lg p-8 border transition-all hover:-translate-y-1 ${
-                    isPopular
-                      ? "bg-gradient-to-br from-white to-sky-50 dark:from-neutral-900 dark:to-neutral-800 border-2 border-indigo-500 dark:border-indigo-400 hover:shadow-indigo-500/20 relative"
-                      : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 hover:shadow-2xl hover:border-indigo-200 dark:hover:border-indigo-800"
-                  }`}
-                >
-                  {isPopular && (
-                    <div className="absolute top-0 right-0 bg-gradient-to-r from-indigo-600 to-sky-600 text-white px-5 py-1.5 rounded-bl-2xl rounded-tr-3xl text-xs font-bold tracking-wide">
-                      Popular
-                    </div>
-                  )}
-                  <div className="mb-6">
-                    <div
-                      className={`w-12 h-12 ${getIconBgColor(
-                        plan.planType
-                      )} rounded-lg flex items-center justify-center mb-4`}
-                    >
-                      {getPlanIcon(plan.planType)}
-                    </div>
-                    <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {plan.description}
-                    </p>
-                  </div>
-                  <div className="mb-6">
-                    <span className="text-4xl font-bold">{priceInfo.main}</span>
-                    <span className="text-gray-600 dark:text-gray-400 ml-2">
-                      {priceInfo.sub}
-                    </span>
-                    {priceInfo.savings && (
-                      <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                        {priceInfo.savings}
-                      </p>
-                    )}
-                  </div>
-                  <ul className="space-y-3 mb-8">
-                    {features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2">
-                        <svg
-                          className="w-5 h-5 text-green-500"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={() => handleGetStarted(plan.id)}
-                    disabled={checkoutLoading === plan.id}
-                    className={`block w-full py-3.5 text-white rounded-xl transition-all font-semibold text-center ${
+                return (
+                  <div
+                    key={plan.id ?? `plan-${index}`}
+                    className={`rounded-3xl shadow-2xl p-10 border-2 transition-all hover:-translate-y-2 hover:shadow-3xl ${
                       isPopular
-                        ? "bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-700 hover:to-sky-700 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/40"
-                        : "bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/30"
-                    } ${
-                      checkoutLoading === plan.id
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
+                        ? "bg-gradient-to-br from-white to-green-50 dark:from-neutral-900 dark:to-neutral-800 border-green-500 dark:border-green-400 relative"
+                        : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-700"
                     }`}
                   >
-                    {checkoutLoading === plan.id ? "Loading..." : "Get Started"}
-                  </button>
-                </div>
-              );
-            })}
+                    {isPopular && (
+                      <div className="absolute top-0 right-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 rounded-bl-2xl rounded-tr-3xl text-sm font-bold tracking-wide">
+                        Most Popular
+                      </div>
+                    )}
+                    
+                    <div className="mb-8">
+                      {getBikeImage(plan.planType)}
+                    </div>
+                    
+                    <div className="text-center mb-6">
+                      <h3 className="text-4xl font-extrabold mb-4 bg-gradient-to-r from-indigo-600 to-sky-600 bg-clip-text text-transparent">
+                        {plan.name}
+                      </h3>
+                      <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {plan.description}
+                      </p>
+                    </div>
+                    
+                    <ul className="space-y-4 mt-8">
+                      {features.map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-3">
+                          <svg
+                            className="w-7 h-7 text-green-500 flex-shrink-0"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span className="text-lg text-gray-700 dark:text-gray-300">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </section>
 
-      <footer className="border-t border-gray-200 dark:border-slate-700 mt-24">
+      <footer className="border-t border-gray-200 dark:border-slate-700 mt-24 relative z-10">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">

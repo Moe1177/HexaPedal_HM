@@ -48,8 +48,10 @@ public class BillingController {
         }
 
         int flexDollarsUsed = ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0;
+        String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
         String costBreakdown = billingService.generateCostBreakdown(
                 user.getId(),
+                bikeType,
                 ride.getDuration(),
                 ride.getCost(),
                 flexDollarsUsed
@@ -93,20 +95,12 @@ public class BillingController {
             return ResponseEntity.status(403).body("You can only calculate costs for your own trips");
         }
 
-        double cost = billingService.calculateTripCost(user.getId(), ride.getDistance());
+        String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
+        double cost = billingService.calculateTripCost(user.getId(), bikeType, ride.getDuration());
+
 
         billingService.updateRideCost(rideId, cost);
 
-        boolean hasActive = userSubscriptionRepository.hasActiveSubscription(user.getId());
-        if (hasActive) {
-            System.out.println("Active subscription covers it");
-        }else {
-            try {
-                paymentService.chargeForTrip(user.getId(), cost, "Trip #" + rideId);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to charge for trip #" + rideId, e);
-            }
-        }
         return ResponseEntity.ok(new CostResponse(cost, "Cost calculated successfully"));
     }
 

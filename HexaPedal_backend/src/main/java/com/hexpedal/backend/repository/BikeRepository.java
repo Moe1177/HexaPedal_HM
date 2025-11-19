@@ -15,6 +15,7 @@ public interface BikeRepository extends CrudRepository<Bike, Integer> {
     List<Bike> findByBikeStatus(BikeStatus status);
     Optional<Bike> findByIdAndBikeStatus(Integer id, BikeStatus status);
     boolean existsByCurrentUserAndBikeStatus(User currentUser, BikeStatus status);
+    Optional<Bike> findByCurrentUserAndBikeStatus(User currentUser, BikeStatus status);
     List<Bike> findByBikeStatusAndType(BikeStatus status, String type);
     List<Bike> findByCurrentUser(User user);
 

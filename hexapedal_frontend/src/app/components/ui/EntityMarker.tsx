@@ -4,6 +4,7 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapEntity } from '@/types/MapEntity';
+import { DockingStationState } from '@/types/DockingStation';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -15,9 +16,48 @@ L.Icon.Default.mergeOptions({
 interface EntityMarkerProps {
     entity: MapEntity;
     onStationClick?: (stationId: number) => void;
+    isOperatorView?: boolean;
+    onEditState?: (stationId: number) => void;
+    onEditPosition?: (stationId: number) => void;
+    onDelete?: (stationId: number) => void;
 }
 
-export default function EntityMarker({ entity, onStationClick }: EntityMarkerProps) {
+// Create custom colored icons based on station state
+const createColoredIcon = (state?: string) => {
+    let color = '#3b82f6'; // default blue
+    
+    switch (state) {
+        case DockingStationState.ACTIVE:
+            color = '#10b981'; // green
+            break;
+        case DockingStationState.EMPTY:
+            color = '#6b7280'; // gray
+            break;
+        case DockingStationState.FULL:
+            color = '#3b82f6'; // blue
+            break;
+        case DockingStationState.OUT_OF_SERVICE:
+            color = '#ef4444'; // red
+            break;
+    }
+
+    return L.divIcon({
+        html: `<div style="background-color: ${color}; width: 25px; height: 25px; border-radius: 50% 50% 50% 0; border: 2px solid white; transform: rotate(-45deg); box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [25, 25],
+        iconAnchor: [12, 25],
+        popupAnchor: [0, -25],
+        className: 'custom-marker-icon',
+    });
+};
+
+export default function EntityMarker({ 
+    entity, 
+    onStationClick,
+    isOperatorView = false,
+    onEditState,
+    onEditPosition,
+    onDelete
+}: EntityMarkerProps) {
     const position: [number, number] = [entity.latitude, entity.longitude];
 
     const handleMarkerClick = () => {
@@ -26,29 +66,76 @@ export default function EntityMarker({ entity, onStationClick }: EntityMarkerPro
         }
     };
 
+    // Use colored icon for stations
+    const icon = entity.type === "station" 
+        ? createColoredIcon((entity as any).status) 
+        : undefined;
+
     return (
         <Marker 
             position={position}
+            icon={icon}
             eventHandlers={{
                 click: handleMarkerClick,
             }}
         >
             <Popup>
                 {entity.type === "station" && (
-                    <>
-                        <strong>{entity.name}</strong>
-                        <br />
-                        {entity.address}
-                        <br />
-                        Bikes Docked: {entity.numberOfBikesDocked}/{entity.bikeCapacity}
-                        <br />
-                        <button
-                            onClick={() => onStationClick?.(entity.id)}
-                            className="mt-2 px-3 py-1 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
-                        >
-                            View Details
-                        </button>
-                    </>
+                    <div className="min-w-[200px]">
+                        <div className="font-bold text-base mb-1">{entity.name}</div>
+                        <div className="text-sm text-neutral-600 mb-2">{entity.address}</div>
+                        
+                        {(entity as any).status && (
+                            <div className="mb-2">
+                                <span className="text-xs font-medium">Status: </span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    (entity as any).status === DockingStationState.ACTIVE
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : (entity as any).status === DockingStationState.OUT_OF_SERVICE
+                                        ? 'bg-red-100 text-red-700'
+                                        : (entity as any).status === DockingStationState.FULL
+                                        ? 'bg-sky-100 text-sky-700'
+                                        : 'bg-neutral-100 text-neutral-700'
+                                }`}>
+                                    {(entity as any).status}
+                                </span>
+                            </div>
+                        )}
+                        
+                        <div className="text-sm mb-2">
+                            Bikes: {entity.numberOfBikesDocked}/{entity.bikeCapacity}
+                        </div>
+                        
+                        {!isOperatorView ? (
+                            <button
+                                onClick={() => onStationClick?.(entity.id)}
+                                className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 transition-colors"
+                            >
+                                View Details
+                            </button>
+                        ) : (
+                            <div className="flex flex-col gap-1 mt-2">
+                                <button
+                                    onClick={() => onEditState?.(entity.id)}
+                                    className="w-full px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 transition-colors"
+                                >
+                                    Edit State
+                                </button>
+                                <button
+                                    onClick={() => onEditPosition?.(entity.id)}
+                                    className="w-full px-3 py-1.5 bg-sky-600 text-white rounded text-sm hover:bg-sky-700 transition-colors"
+                                >
+                                    Edit Position
+                                </button>
+                                <button
+                                    onClick={() => onDelete?.(entity.id)}
+                                    className="w-full px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 )}
             </Popup>
         </Marker>

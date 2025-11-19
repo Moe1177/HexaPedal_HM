@@ -1,6 +1,17 @@
 import { API_BASE_URL } from "../../utils/constants";
 
-export async function unlockBike(bikeId: number, token?: string | null): Promise<void> {
+export interface DestinationData {
+  stationId: number;
+  stationName: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function unlockBike(
+  bikeId: number, 
+  token?: string | null,
+  destinationData?: DestinationData | null
+): Promise<void> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -14,6 +25,7 @@ export async function unlockBike(bikeId: number, token?: string | null): Promise
     {
       method: "POST",
       headers,
+      body: destinationData ? JSON.stringify(destinationData) : undefined,
     }
   );
 

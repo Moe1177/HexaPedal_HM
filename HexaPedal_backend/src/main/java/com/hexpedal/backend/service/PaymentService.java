@@ -35,6 +35,10 @@ public class PaymentService {
         return customer.getId();
     }
 
+    public Optional<PaymentMethod> getDefaultPaymentMethod(Long userId) {
+        return paymentMethodRepo.findByUserIdAndDefaultMethodTrue(userId);
+    }
+
     public PaymentMethod saveStripePaymentMethod(Long userId, String stripePaymentMethodId,
                                                  BillingAddress billingAddress, String cardholderName)
             throws Exception {
