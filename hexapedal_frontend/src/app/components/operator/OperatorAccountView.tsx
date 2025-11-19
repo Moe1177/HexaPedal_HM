@@ -6,7 +6,7 @@ import { getEmailFromToken, getUserIdFromToken } from "@/app/services/user/getCu
 import { logout } from "@/app/services/authentication/authService";
 import { useRouter } from "next/navigation";
 
-export default function ProfileView() {
+export default function OperatorAccountView() {
   const { token, setToken } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export default function ProfileView() {
   };
 
   const getInitials = (email: string | null) => {
-    if (!email) return "U";
+    if (!email) return "OP";
     const parts = email.split("@")[0];
     if (parts.length >= 2) {
       return parts.substring(0, 2).toUpperCase();
@@ -54,8 +54,8 @@ export default function ProfileView() {
     <div className="h-full bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-950 p-6 overflow-y-auto">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Profile</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">Manage your account information</p>
+          <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">Account</h1>
+          <p className="text-neutral-600 dark:text-neutral-400">Manage your operator account information</p>
         </div>
 
         {/* Profile Card */}
@@ -66,7 +66,7 @@ export default function ProfileView() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-1">
-                {email ? email.split("@")[0] : "User"}
+                {email ? email.split("@")[0] : "Operator"}
               </h2>
               <p className="text-neutral-600 dark:text-neutral-400">{email || "No email available"}</p>
             </div>
@@ -107,7 +107,7 @@ export default function ProfileView() {
                 <div>
                   <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 mb-1">Sign Out</h4>
                   <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    Sign out of your account and return to the login page
+                    Sign out of your operator account and return to the login page
                   </p>
                 </div>
                 <button
@@ -128,7 +128,7 @@ export default function ProfileView() {
           <div className="space-y-4">
             <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
               <span className="text-neutral-600 dark:text-neutral-400">Account Type</span>
-              <span className="font-medium text-neutral-900 dark:text-neutral-100">Rider</span>
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">Operator</span>
             </div>
             <div className="flex items-center justify-between py-3">
               <span className="text-neutral-600 dark:text-neutral-400">Status</span>

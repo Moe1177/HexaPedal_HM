@@ -497,6 +497,6 @@ export default function Signup() {
           <SignupFormInner />
         </Elements>
       </div>
-    </div>
+    </main>
   );
 }
