@@ -22,17 +22,12 @@ public class FlexDollarsController {
     private FlexDollarService flexdollarservice;
 
     @PostMapping("/{id}/add-flex")
-    public Rider addFlexDollars(@PathVariable Long id,@RequestParam int amount){
-        return (Rider) flexdollarservice.addFlexDollars(id,amount);
+    public User addFlexDollars(@PathVariable Long id,@RequestParam int amount){
+        return flexdollarservice.addFlexDollars(id,amount);
     }
 
     @GetMapping("/balance")
-    @PreAuthorize("hasRole('RIDER')")
     public ResponseEntity<?> getFlexDollarsBalance(@AuthenticationPrincipal User user) {
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can view flex dollars balance");
-        }
-
         int balance = flexdollarservice.getAvailableFlexDollars(user.getId());
         return ResponseEntity.ok(new FlexDollarsBalanceResponse(balance));
     }
