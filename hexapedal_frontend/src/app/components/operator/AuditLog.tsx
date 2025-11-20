@@ -47,6 +47,10 @@ export default function AuditLog() {
   };
 
   const formatDuration = (minutes: number) => {
+    if (minutes < 1) {
+      const seconds = Math.round(minutes * 60);
+      return `${seconds}s`;
+    }
     const hours = Math.floor(minutes / 60);
     const mins = Math.floor(minutes % 60);
     if (hours > 0) {

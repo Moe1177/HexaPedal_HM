@@ -68,7 +68,11 @@ export default function MyRidesView() {
   };
 
   const formatDuration = (minutes: number | null) => {
-    if (!minutes) return "N/A";
+    if (minutes === null || minutes === undefined) return "N/A";
+    if (minutes < 1) {
+      const seconds = Math.round(minutes * 60);
+      return `${seconds}s`;
+    }
     if (minutes < 60) return `${Math.round(minutes)} min`;
     const hours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);

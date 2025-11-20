@@ -6,7 +6,7 @@ import { getBillingInfo } from "@/app/services/user/rider/getBillingInfo";
 import { getCurrentSubscription } from "@/app/services/subscriptions/getCurrentSubscription";
 import { cancelSubscription } from "@/app/services/subscriptions/cancelSubscription";
 import { useAuth } from "@/hooks/useAuth";
-import { getUserIdFromToken } from "@/app/services/user/getCurrentUser";
+import { getUserIdFromToken, getRoleFromToken } from "@/app/services/user/getCurrentUser";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getPaymentMethod, addPaymentMethod, PaymentMethodResponse } from "@/app/services/rider/payment";
@@ -276,10 +276,15 @@ export default function BillingView() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState<string | null>(null);
 
+  const [isOperator, setIsOperator] = useState(false);
+
   useEffect(() => {
     if (token) {
       const id = getUserIdFromToken(token);
       setUserId(id);
+      const roles = getRoleFromToken(token);
+      const isOp = roles?.some(r => r.authority === "ROLE_OPERATOR") || false;
+      setIsOperator(isOp);
     } else {
       setIsLoading(false);
     }
@@ -584,6 +589,13 @@ export default function BillingView() {
               <h3 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-4">
                 Bike Pricing Plans
               </h3>
+              {isOperator && (
+                <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                    🎯 Operator Discount: You receive a <strong>15% discount</strong> on all trips (applied after loyalty discounts)
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Standard Bike Plan */}
                 <div className="p-6 bg-gradient-to-br from-indigo-50 to-sky-50 dark:from-indigo-900/20 dark:to-sky-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">

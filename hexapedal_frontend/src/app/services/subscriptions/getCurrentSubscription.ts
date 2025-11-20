@@ -15,27 +15,27 @@ export async function getCurrentSubscription(
     },
   });
 
+  const text = await response.text();
+
   if (!response.ok) {
-    // If 200 OK but body says "No active subscription", return null
-    const text = await response.text();
-    if (text.includes("No active subscription")) {
+  
+    if (text.includes("Only riders") || text.includes("subscription")) {
+     
       return null;
     }
     throw new Error("Failed to fetch current subscription");
   }
 
-  const text = await response.text();
-
-  // Handle "No active subscription" response
   if (text.includes("No active subscription")) {
     return null;
   }
 
-  // Parse JSON response
+
   try {
     const data: Subscription = JSON.parse(text);
     return data;
   } catch (error) {
+ 
     return null;
   }
 }

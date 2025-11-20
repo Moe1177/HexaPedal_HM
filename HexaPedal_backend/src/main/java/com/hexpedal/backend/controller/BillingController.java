@@ -64,7 +64,26 @@ public class BillingController {
 
         List<Rides> rides = ridesRepository.findByUserId(Math.toIntExact(user.getId()));
 
+     
         List<BillingHistoryDto> history = rides.stream()
+                .sorted((r1, r2) -> {
+                    java.time.Instant ts1 = r1.getStartTimestamp();
+                    java.time.Instant ts2 = r2.getStartTimestamp();
+                    
+                  
+                    if (ts1 == null && ts2 == null) {
+                        return 0;
+                    }
+                    if (ts1 == null) {
+                        return 1;
+                    }
+                    if (ts2 == null) {
+                        return -1; 
+                    }
+                    
+                   
+                    return ts2.compareTo(ts1);
+                })
                 .map(BillingHistoryDto::from)
                 .collect(Collectors.toList());
 

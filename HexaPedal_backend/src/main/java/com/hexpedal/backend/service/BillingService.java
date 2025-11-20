@@ -1,7 +1,6 @@
 package com.hexpedal.backend.service;
 
 import com.hexpedal.backend.model.BikePricingPlan;
-import com.hexpedal.backend.model.Operator;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.RidesRepository;
@@ -21,7 +20,7 @@ public class BillingService {
     private final LoyaltyService loyaltyService;
     private final UserRepository userRepository;
 
-    private static final double OPERATOR_DISCOUNT_PERCENTAGE = 0.50; 
+    private static final double OPERATOR_DISCOUNT_PERCENTAGE = 0.15; 
 
     @Transactional
     public double calculateTripCost(Long userId, String bikeType, double durationMinutes) {
@@ -35,9 +34,11 @@ public class BillingService {
       
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+        boolean isOperator = "OPERATOR".equals(user.getRole()) || 
+                            user.getClass().getSimpleName().equals("Operator");
         
-        if (user instanceof Operator) {
-          
+        if (isOperator) {
             costAfterLoyalty = costAfterLoyalty * (1 - OPERATOR_DISCOUNT_PERCENTAGE);
         }
 
@@ -56,7 +57,9 @@ public class BillingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         
-        boolean isOperator = user instanceof Operator;
+
+        boolean isOperator = "OPERATOR".equals(user.getRole()) || 
+                            user.getClass().getSimpleName().equals("Operator");
         double loyaltyDiscountPercentage = loyaltyService.getOrCreateLoyalty(user).getDiscountPercentage();
 
         double flexDollarsInDollars = flexDollarsUsed / 100.0;
@@ -99,7 +102,7 @@ public class BillingService {
         return breakdown.toString();
     }
 
-    // Maintain backward compatibility for existing calls
+
     public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double cost) {
         return generateCostBreakdown(userId, bikeType, durationMinutes, cost, 0);
     }

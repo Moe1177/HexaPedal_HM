@@ -20,7 +20,26 @@ public class RideHistoryService {
             throw new IllegalArgumentException("User ID cannot be null");
         }
 
-        return ridesRepo.findByUserId(userId);
+        return ridesRepo.findByUserId(userId).stream()
+                .sorted((r1, r2) -> {
+                    Instant ts1 = r1.getStartTimestamp();
+                    Instant ts2 = r2.getStartTimestamp();
+                    
+                    // Handle null timestamps
+                    if (ts1 == null && ts2 == null) {
+                        return 0;
+                    }
+                    if (ts1 == null) {
+                        return 1; // null goes to end
+                    }
+                    if (ts2 == null) {
+                        return -1; // null goes to end
+                    }
+                    
+                    // Sort descending (newest first)
+                    return ts2.compareTo(ts1);
+                })
+                .toList();
     }
 
     public List<Rides> getAllRides() {

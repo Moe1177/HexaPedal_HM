@@ -22,15 +22,17 @@ public class LoyaltyController {
     private final UserRepository userRepository;
 
     @GetMapping("/status")
-    public ResponseEntity<LoyaltyStatusDto> getLoyaltyStatus(Authentication authentication) {
-        String email = authentication.getName();
-        var user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
+    public ResponseEntity<?> getLoyaltyStatus(@AuthenticationPrincipal User user) {
+        try {
+            RiderLoyalty loyalty = loyaltyService.evaluateTier(user.getId());
+            TierProgressDto progress = loyaltyService.calculateTierProgress(user.getId());
 
-        RiderLoyalty loyalty = loyaltyService.evaluateTier(user.getId());
-        TierProgressDto progress = loyaltyService.calculateTierProgress(user.getId());
-
-        return ResponseEntity.ok(LoyaltyStatusDto.from(loyalty, progress));
+            return ResponseEntity.ok(LoyaltyStatusDto.from(loyalty, progress));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Failed to fetch loyalty status: " + e.getMessage());
+        }
     }
 
     @GetMapping("/progress/{userId}")

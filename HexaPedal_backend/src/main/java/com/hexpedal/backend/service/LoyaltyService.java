@@ -253,7 +253,8 @@ public class LoyaltyService {
             Instant monthEndInstant = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             long tripsInMonth = allRides.stream()
-                    .filter(r -> !r.getStartTimestamp().isBefore(monthStartInstant)
+                    .filter(r -> r.getStartTimestamp() != null
+                            && !r.getStartTimestamp().isBefore(monthStartInstant)
                             && r.getStartTimestamp().isBefore(monthEndInstant))
                     .count();
 
@@ -272,7 +273,8 @@ public class LoyaltyService {
             Instant weekEnd = Instant.now().minus(7L * i, ChronoUnit.DAYS);
 
             long tripsInWeek = allRides.stream()
-                    .filter(r -> r.getStartTimestamp().isAfter(weekStart)
+                    .filter(r -> r.getStartTimestamp() != null
+                            && r.getStartTimestamp().isAfter(weekStart)
                             && r.getStartTimestamp().isBefore(weekEnd))
                     .count();
 
@@ -350,7 +352,7 @@ public class LoyaltyService {
         // Update trip statistics from Rides table
         List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
         List<Rides> ridesLastYear = allRides.stream()
-                .filter(r -> r.getStartTimestamp().isAfter(oneYearAgo))
+                .filter(r -> r.getStartTimestamp() != null && r.getStartTimestamp().isAfter(oneYearAgo))
                 .toList();
 
         loyalty.setTotalTrips(allRides.size());
@@ -453,7 +455,8 @@ public class LoyaltyService {
             Instant monthEndInstant = monthEnd.atZone(ZoneId.systemDefault()).toInstant();
 
             long tripsInMonth = allRides.stream()
-                    .filter(r -> !r.getStartTimestamp().isBefore(monthStartInstant)
+                    .filter(r -> r.getStartTimestamp() != null
+                            && !r.getStartTimestamp().isBefore(monthStartInstant)
                             && r.getStartTimestamp().isBefore(monthEndInstant))
                     .count();
 
@@ -473,7 +476,8 @@ public class LoyaltyService {
             Instant weekEnd = Instant.now().minus(7L * i, ChronoUnit.DAYS);
 
             long tripsInWeek = allRides.stream()
-                    .filter(r -> r.getStartTimestamp().isAfter(weekStart)
+                    .filter(r -> r.getStartTimestamp() != null
+                            && r.getStartTimestamp().isAfter(weekStart)
                             && r.getStartTimestamp().isBefore(weekEnd))
                     .count();
 
