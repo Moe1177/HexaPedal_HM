@@ -824,6 +824,34 @@ export default function RiderDashboard() {
                 />
               </MapEntitiesProvider>
 
+              {/* Map Legend */}
+              <div className="absolute bottom-6 left-6 z-[1000] bg-white dark:bg-neutral-900 rounded-xl shadow-xl p-4 border border-neutral-200 dark:border-neutral-700 max-w-xs">
+                <h3 className="text-sm font-bold mb-3 text-neutral-900 dark:text-neutral-100">Station Capacity</h3>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Balanced</div>
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400">25% - 85% full</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 bg-yellow-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Almost Empty or Full</div>
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400">&lt;25% or &gt;85% full</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow-sm flex-shrink-0 mt-0.5"></div>
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">Empty or Full</div>
+                      <div className="text-xs text-neutral-600 dark:text-neutral-400">0% or 100% full</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="absolute bottom-6 right-6 z-[1000]">
                 <button
                   onClick={handleStartRide}
@@ -917,6 +945,7 @@ export default function RiderDashboard() {
         <LoyaltyDetailModal
           loyaltyStatus={loyaltyStatus}
           onClose={() => setShowLoyaltyModal(false)}
+          token={token}
         />
       )}
 

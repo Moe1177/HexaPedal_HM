@@ -21,7 +21,7 @@ public class BillingService {
     private final LoyaltyService loyaltyService;
     private final UserRepository userRepository;
 
-    private static final double OPERATOR_DISCOUNT_PERCENTAGE = 0.50; // 50% discount for operators
+    private static final double OPERATOR_DISCOUNT_PERCENTAGE = 0.50; 
 
     @Transactional
     public double calculateTripCost(Long userId, String bikeType, double durationMinutes) {
@@ -44,7 +44,7 @@ public class BillingService {
         return Math.round(costAfterLoyalty * 100.0) / 100.0; 
     }
 
-    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double finalCost) {
+    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double cost, int flexDollarsUsed) {
         BikePricingPlan plan = BikePricingPlan.fromBikeType(bikeType);
 
         BigDecimal baseFee = plan.getBaseFee();
@@ -59,6 +59,14 @@ public class BillingService {
         boolean isOperator = user instanceof Operator;
         double loyaltyDiscountPercentage = loyaltyService.getOrCreateLoyalty(user).getDiscountPercentage();
 
+        double flexDollarsInDollars = flexDollarsUsed / 100.0;
+        double finalCost = cost - flexDollarsInDollars;
+
+      
+        BigDecimal costAfterLoyalty = totalBeforeDiscount
+                .multiply(BigDecimal.valueOf(1 - loyaltyDiscountPercentage))
+                .setScale(2, RoundingMode.HALF_UP);
+
         StringBuilder breakdown = new StringBuilder();
         breakdown.append(String.format("Bike Type: %s\n", plan.getBikeType()));
         breakdown.append(String.format("Base Fee: $%.2f CAD\n", baseFee));
@@ -66,10 +74,7 @@ public class BillingService {
                 durationMinutes, ratePerMinute, timeCost));
         breakdown.append(String.format("Subtotal: $%.2f CAD\n", totalBeforeDiscount));
 
-        BigDecimal costAfterLoyalty = totalBeforeDiscount;
         if (loyaltyDiscountPercentage > 0) {
-            costAfterLoyalty = totalBeforeDiscount.multiply(BigDecimal.valueOf(1 - loyaltyDiscountPercentage))
-                    .setScale(2, RoundingMode.HALF_UP);
             BigDecimal loyaltyDiscountAmount = totalBeforeDiscount.subtract(costAfterLoyalty);
             breakdown.append(String.format("Loyalty discount (%.0f%%): -$%.2f CAD\n",
                     loyaltyDiscountPercentage * 100, loyaltyDiscountAmount));
@@ -84,9 +89,19 @@ public class BillingService {
                     OPERATOR_DISCOUNT_PERCENTAGE * 100, operatorDiscountAmount));
         }
 
-        breakdown.append(String.format("Final cost: $%.2f CAD", finalCost));
+        if (flexDollarsUsed > 0) {
+            breakdown.append(String.format("Flex dollars applied: -%d flex dollars ($%.2f CAD)\n",
+                    flexDollarsUsed, flexDollarsInDollars));
+        }
+
+        breakdown.append(String.format("Final cost: $%.2f CAD", Math.max(0, finalCost)));
 
         return breakdown.toString();
+    }
+
+    // Maintain backward compatibility for existing calls
+    public String generateCostBreakdown(Long userId, String bikeType, double durationMinutes, double cost) {
+        return generateCostBreakdown(userId, bikeType, durationMinutes, cost, 0);
     }
 
     @Transactional

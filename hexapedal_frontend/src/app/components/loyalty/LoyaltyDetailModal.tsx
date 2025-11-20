@@ -1,13 +1,38 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { LoyaltyStatus, LoyaltyTier, getTierName, getTierColor } from "@/types/Loyalty";
+import { getFlexDollars } from "@/app/services/user/rider/getFlexDollars";
 
 interface LoyaltyDetailModalProps {
   loyaltyStatus: LoyaltyStatus;
   onClose: () => void;
+  token?: string | null;
 }
 
-export default function LoyaltyDetailModal({ loyaltyStatus, onClose }: LoyaltyDetailModalProps) {
+export default function LoyaltyDetailModal({ loyaltyStatus, onClose, token }: LoyaltyDetailModalProps) {
+  const [flexDollarsBalance, setFlexDollarsBalance] = useState<number | null>(null);
+  const [isLoadingFlexDollars, setIsLoadingFlexDollars] = useState(false);
+
+  // Fetch flex dollars on mount
+  useEffect(() => {
+    const fetchFlexDollars = async () => {
+      if (!token) return;
+      
+      setIsLoadingFlexDollars(true);
+      try {
+        const balance = await getFlexDollars(token);
+        setFlexDollarsBalance(balance);
+      } catch (err) {
+        console.error("Failed to fetch flex dollars:", err);
+        setFlexDollarsBalance(0);
+      } finally {
+        setIsLoadingFlexDollars(false);
+      }
+    };
+
+    fetchFlexDollars();
+  }, [token]);
   const tier = loyaltyStatus.currentTier;
   const tierName = getTierName(tier);
   const tierGradient = getTierColor(tier);
@@ -94,7 +119,7 @@ export default function LoyaltyDetailModal({ loyaltyStatus, onClose }: LoyaltyDe
             <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
               Your Benefits
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center gap-2 mb-2">
                   <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,6 +147,32 @@ export default function LoyaltyDetailModal({ loyaltyStatus, onClose }: LoyaltyDe
                 </p>
                 <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                   Hold time for bikes
+                </p>
+              </div>
+
+              <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium text-neutral-900 dark:text-neutral-100">Flex Dollars</span>
+                </div>
+                {isLoadingFlexDollars ? (
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    ...
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {flexDollarsBalance !== null ? flexDollarsBalance.toLocaleString() : "0"} flex dollars
+                    </p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
+                      ${flexDollarsBalance !== null ? (flexDollarsBalance / 100).toFixed(2) : "0.00"} CAD available
+                    </p>
+                  </>
+                )}
+                <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-2">
+                  Use for trips and reservations
                 </p>
               </div>
             </div>

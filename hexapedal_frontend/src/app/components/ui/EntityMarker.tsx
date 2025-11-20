@@ -22,23 +22,29 @@ interface EntityMarkerProps {
     onDelete?: (stationId: number) => void;
 }
 
-// Create custom colored icons based on station state
-const createColoredIcon = (state?: string) => {
-    let color = '#3b82f6'; // default blue
+// Create custom colored icons based on station fullness (DM-03)
+// Color scheme based on fullness percentage:
+// - Red (#ef4444): 0% or 100% fullness (empty/full)
+// - Yellow (#eab308): <25% or >85% fullness (almost empty/almost full)
+// - Green (#10b981): 25%-85% fullness (balanced)
+const createColoredIcon = (numberOfBikesDocked?: number, bikeCapacity?: number) => {
+    let color = '#10b981'; // default green (balanced)
     
-    switch (state) {
-        case DockingStationState.ACTIVE:
-            color = '#10b981'; // green
-            break;
-        case DockingStationState.EMPTY:
-            color = '#6b7280'; // gray
-            break;
-        case DockingStationState.FULL:
-            color = '#3b82f6'; // blue
-            break;
-        case DockingStationState.OUT_OF_SERVICE:
+    if (numberOfBikesDocked !== undefined && bikeCapacity !== undefined && bikeCapacity > 0) {
+        const fullnessPercent = (numberOfBikesDocked / bikeCapacity) * 100;
+        
+        // Red: 0% or 100%
+        if (fullnessPercent === 0 || fullnessPercent === 100) {
             color = '#ef4444'; // red
-            break;
+        }
+        // Yellow: <25% or >85%
+        else if (fullnessPercent < 25 || fullnessPercent > 85) {
+            color = '#eab308'; // yellow
+        }
+        // Green: 25%-85% (balanced)
+        else {
+            color = '#10b981'; // green
+        }
     }
 
     return L.divIcon({
@@ -66,9 +72,9 @@ export default function EntityMarker({
         }
     };
 
-    // Use colored icon for stations
+    // Use colored icon for stations based on fullness
     const icon = entity.type === "station" 
-        ? createColoredIcon((entity as any).status) 
+        ? createColoredIcon(entity.numberOfBikesDocked, entity.bikeCapacity) 
         : undefined;
 
     return (

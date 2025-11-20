@@ -12,7 +12,8 @@ interface BackendRide {
   endTimestamp: string;
   duration: number;
   distance: number;
-  cost: number;
+  cost: number; // This is already the final cost after flex dollars
+  flexDollarsUsed: number | null;
   bike: {
     id: number;
   } | null;

@@ -74,7 +74,7 @@ export default function MapClient({
                 />
                 {entities.map((entity) => (
                     <EntityMarker
-                        key={`${entity.id}-${entity.type === 'station' ? (entity as any).status : ''}`}
+                        key={`${entity.id}-${entity.type === 'station' ? entity.numberOfBikesDocked : ''}`}
                         entity={entity}
                         onStationClick={handleStationClick}
                         isOperatorView={isOperatorView}

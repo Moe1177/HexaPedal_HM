@@ -14,6 +14,7 @@ public record TripSummaryDto(
         double duration,
         double distance,
         double cost,
+        Integer flexDollarsUsed,
         String costBreakdown
 ) {
     public static TripSummaryDto from(Rides ride, String costBreakdown) {
@@ -27,8 +28,8 @@ public record TripSummaryDto(
                 ride.getDuration(),
                 ride.getDistance(),
                 ride.getCost(),
+                ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0,
                 costBreakdown
         );
     }
 }
-

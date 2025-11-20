@@ -7,6 +7,7 @@ import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import com.hexpedal.backend.service.BillingService;
+import com.hexpedal.backend.service.FlexDollarService;
 import com.hexpedal.backend.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ public class BillingController {
     private final RidesRepository ridesRepository;
     private final PaymentService paymentService;
     private final UserSubscriptionRepository userSubscriptionRepository;
+    private final FlexDollarService flexDollarService;
 
 
 
@@ -42,12 +44,14 @@ public class BillingController {
             return ResponseEntity.status(403).body("You can only view your own trip summaries");
         }
 
+        int flexDollarsUsed = ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0;
         String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
         String costBreakdown = billingService.generateCostBreakdown(
                 user.getId(),
                 bikeType,
                 ride.getDuration(),
-                ride.getCost()
+                ride.getCost(),
+                flexDollarsUsed
         );
 
         TripSummaryDto summary = TripSummaryDto.from(ride, costBreakdown);
@@ -83,12 +87,29 @@ public class BillingController {
         String bikeType = ride.getBike() != null ? ride.getBike().getType() : "Standard";
         double cost = billingService.calculateTripCost(user.getId(), bikeType, ride.getDuration());
 
+        // Apply flex dollars to reduce the cost (same as in ReservationService)
+        int flexDollarsUsed = 0;
+        double finalCostToCharge = cost;
 
-        billingService.updateRideCost(rideId, cost);
+        if (cost > 0) {
+            // Apply flex dollars to the trip cost
+            FlexDollarService.AppliedFlexDollarsResult flexResult =
+                    flexDollarService.applyFlexDollarsToTrip(user.getId(), cost);
+            flexDollarsUsed = flexResult.getFlexDollarsUsed();
+            finalCostToCharge = flexResult.getFinalCostToCharge();
+        }
 
-        return ResponseEntity.ok(new CostResponse(cost, "Cost calculated successfully"));
+        // Update ride with final cost after flex dollars
+        billingService.updateRideCost(rideId, finalCostToCharge);
+        
+        // Update flex dollars used if it changed
+        if (flexDollarsUsed > 0) {
+            ride.setFlexDollarsUsed(flexDollarsUsed);
+            ridesRepository.save(ride);
+        }
+
+        return ResponseEntity.ok(new CostResponse(finalCostToCharge, "Cost calculated successfully"));
     }
 
     private record CostResponse(double cost, String message) {}
 }
-
