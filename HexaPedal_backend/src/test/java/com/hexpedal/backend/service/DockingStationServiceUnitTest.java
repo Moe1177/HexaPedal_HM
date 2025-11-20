@@ -18,7 +18,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class DockingStationServiceTest {
+public class DockingStationServiceUnitTest {
 
     @Mock
     DockingStationRepository dockingStationRepository;

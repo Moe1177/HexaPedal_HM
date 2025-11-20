@@ -15,7 +15,7 @@ import java.util.Optional;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class BikeServiceTest {
+public class BikeServiceUnitTest {
     @Mock
     private BikeRepository bikeRepo;
 

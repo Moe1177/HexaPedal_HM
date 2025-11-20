@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class RideHistoryServiceTest {
+public class RideHistoryServiceUnitTest {
     @Mock
     private RidesRepository ridesRepo;
 

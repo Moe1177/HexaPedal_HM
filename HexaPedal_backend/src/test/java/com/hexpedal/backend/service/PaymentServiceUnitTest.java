@@ -30,7 +30,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class PaymentServiceTest {
+public class PaymentServiceUnitTest {
 
     @Mock
     private PaymentMethodRepository paymentMethodRepo;
