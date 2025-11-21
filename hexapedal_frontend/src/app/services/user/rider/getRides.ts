@@ -2,10 +2,11 @@ import { API_BASE_URL } from "../../utils/constants";
 import { Trip } from "@/types/Trip";
 
 /**
- * Backend Rides model structure from the API
+ * Backend Rides model structure from the API (RideHistoryDto)
  */
 interface BackendRide {
   ride_id: number;
+  bikeId: number | null;
   startLocation: string;
   endLocation: string;
   startTimestamp: string;
@@ -14,9 +15,6 @@ interface BackendRide {
   distance: number;
   cost: number; // This is already the final cost after flex dollars
   flexDollarsUsed: number | null;
-  bike: {
-    id: number;
-  } | null;
 }
 
 /**
@@ -31,7 +29,7 @@ function mapBackendRideToTrip(backendRide: BackendRide): Trip {
   
   return {
     id: backendRide.ride_id,
-    bikeId: backendRide.bike?.id,
+    bikeId: backendRide.bikeId ?? undefined,
     userId: 0, // Not provided by backend, will be set from token
     startStationId,
     startStationName: backendRide.startLocation,

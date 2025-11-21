@@ -45,17 +45,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             subjectEmail = jwtService.extractUsername(jwt); // this returns email so that it can match with the JWT
+            System.out.println("JWT authentication - extracted email: " + subjectEmail);
         } catch (JwtException | IllegalArgumentException e) {
-
+            System.err.println("JWT extraction failed: " + e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
             return;
         }
 
         if (subjectEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(subjectEmail);
+            try {
+                System.out.println("Loading user details for: " + subjectEmail);
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(subjectEmail);
+                System.out.println("User details loaded successfully");
 
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
@@ -64,6 +68,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token");
+                return;
+            }
+            } catch (RuntimeException e) {
+                // User not found
+                System.err.println("User lookup failed: " + e.getMessage());
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("User not found or token is no longer valid");
                 return;
             }
         }

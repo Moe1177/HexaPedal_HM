@@ -25,6 +25,22 @@ export async function getCurrentTrip(token: string): Promise<ActiveTripStatus> {
     }
   );
 
+  // If no trip exists, return a default "no trip" response
+  if (response.status === 404 || response.status === 204) {
+    return {
+      hasActiveTrip: false,
+      bikeId: null,
+      userId: null,
+      bikeType: null,
+      startedAt: null,
+      startStationName: null,
+      destinationStationName: null,
+      destinationStationId: null,
+      destinationLatitude: null,
+      destinationLongitude: null,
+    };
+  }
+
   if (!response.ok) {
     throw new Error("Failed to fetch current trip");
   }

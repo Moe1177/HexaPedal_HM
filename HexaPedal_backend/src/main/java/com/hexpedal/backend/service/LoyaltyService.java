@@ -45,6 +45,11 @@ public class LoyaltyService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         
+        // Skip loyalty evaluation for guest users
+        if (user.getIsGuest() != null && user.getIsGuest()) {
+            return null;
+        }
+        
         RiderLoyalty loyalty = getOrCreateLoyalty(user);
 
         // Update statistics
@@ -504,6 +509,13 @@ public class LoyaltyService {
 
     @Transactional
     public int getReservationHoldMinutes(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        
+        // Guest users get default 10 minutes, no tier bonuses
+        if (user != null && user.getIsGuest() != null && user.getIsGuest()) {
+            return 10;
+        }
+        
         RiderLoyalty loyalty = loyaltyRepo.findByUserId(userId)
                 .orElse(null);
 

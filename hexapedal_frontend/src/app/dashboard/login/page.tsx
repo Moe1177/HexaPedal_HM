@@ -39,10 +39,10 @@ export default function LoginPage() {
       const response = await login(email, password, setToken);
       // Get the token from the response or localStorage
       const token = response.token || localStorage.getItem("auth_token");
-      
+
       const roles = getRoleFromToken(token);
       const role = roles?.[0]?.authority; // safely get the authority value
-      
+
       if (role === "ROLE_OPERATOR") {
         router.push("/dashboard/operator");
       } else {
@@ -62,15 +62,27 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-sky-500">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="w-7 h-7 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-500 bg-clip-text text-transparent tracking-tight">
               HexaPedal
             </span>
           </Link>
-          <h1 className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-neutral-900 to-neutral-700 dark:from-neutral-100 dark:to-neutral-300 bg-clip-text text-transparent">Welcome back</h1>
+          <h1 className="text-4xl font-extrabold mb-3 bg-gradient-to-r from-neutral-900 to-neutral-700 dark:from-neutral-100 dark:to-neutral-300 bg-clip-text text-transparent">
+            Welcome back
+          </h1>
           <p className="text-neutral-600 dark:text-neutral-400 text-lg">
             Sign in to your account to continue
           </p>
@@ -79,7 +91,10 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-10 border border-neutral-100 dark:border-neutral-800">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+              >
                 Email address
               </label>
               <input
@@ -96,7 +111,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+              >
                 Password
               </label>
               <div className="relative">
@@ -125,12 +143,14 @@ export default function LoginPage() {
 
             {errorMessage && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                <p
+                  className="text-sm text-red-600 dark:text-red-400"
+                  role="alert"
+                >
                   {errorMessage}
                 </p>
               </div>
             )}
-
 
             <button
               type="submit"
@@ -141,13 +161,54 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 space-y-4">
+            <div className="text-center">
               <p className="text-sm text-neutral-600 dark:text-neutral-400">
                 Don't have an account?{" "}
-                <Link href="/dashboard/signup" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+                <Link
+                  href="/dashboard/signup"
+                  className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+                >
                   Sign up
                 </Link>
               </p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
+                  or
+                </span>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <Link
+                href="/dashboard/guest"
+                className="inline-flex items-center justify-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
+                </svg>
+                Continue as guest
+              </Link>
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                Try HexaPedal without creating an account
+              </p>
+            </div>
           </div>
         </div>
       </div>

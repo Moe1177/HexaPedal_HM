@@ -15,6 +15,10 @@ public class FlexDollarService {
     }
 
     public User addFlexDollars(User user, int amount) {
+        // Guest users cannot earn flex dollars
+        if (user.getIsGuest() != null && user.getIsGuest()) {
+            return user;
+        }
 
         Integer currentFlexDollars = user.getFlexDollars();
         if (currentFlexDollars == null) {
@@ -64,6 +68,13 @@ public class FlexDollarService {
 
     @Transactional
     public AppliedFlexDollarsResult applyFlexDollarsToTrip(Long userId, double tripCostDollars) {
+        User user = userRepository.findById(userId).orElse(null);
+        
+        // Guest users cannot use flex dollars
+        if (user != null && user.getIsGuest() != null && user.getIsGuest()) {
+            return new AppliedFlexDollarsResult(0, tripCostDollars);
+        }
+        
         // Convert trip cost to cents (1 flex dollar = 1 cent)
         int tripCostCents = (int) Math.round(tripCostDollars * 100);
 
