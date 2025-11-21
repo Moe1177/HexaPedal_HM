@@ -228,7 +228,7 @@ public class TruckServiceUnitTest {
     public void unloadBikeFromTruckToStation_UnloadsBike_WhenDockIsAvailable() {
         // Arrange
         Long truckId = 1L;
-        Integer bikeId = 100;
+        int bikeId = 100;
         Long stationId = 5L;
 
         Bike bike = new Bike();
@@ -283,7 +283,7 @@ public class TruckServiceUnitTest {
     public void unloadBikeFromTruckToStation_ThrowsNotFoundException_WhenStationDoesNotExist() {
         // Arrange
         Long truckId = 1L;
-        Integer bikeId = 100;
+        int bikeId = 100;
         Long stationId = 999L;
 
         Bike bike = new Bike();
@@ -310,7 +310,7 @@ public class TruckServiceUnitTest {
     public void unloadBikeFromTruckToStation_ThrowsBadRequestException_WhenNoEmptyDockAvailable() {
         // Arrange
         Long truckId = 1L;
-        Integer bikeId = 100;
+        int bikeId = 100;
         Long stationId = 5L;
 
         Bike bike = new Bike();

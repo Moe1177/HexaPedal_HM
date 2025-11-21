@@ -82,7 +82,7 @@ public class AuthenticationServiceUnitTest {
     }
 
     @Test
-    public void authenticate_ReturnsSavedUser() throws Exception {
+    public void authenticate_ReturnsSavedUser() {
         LoginUserDto loginUserDto = new LoginUserDto();
         loginUserDto.setEmail("test@gmail.com");
         loginUserDto.setPassword("password");
@@ -106,7 +106,7 @@ public class AuthenticationServiceUnitTest {
     }
 
     @Test
-    public void verifyUser_ReturnsNotSavedUser() throws Exception {
+    public void verifyUser_ReturnsNotSavedUser() {
         User user = User.builder().
                 email("test@gmail.com").
                 password("password").

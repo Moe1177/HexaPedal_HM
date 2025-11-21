@@ -27,9 +27,6 @@ public class BillingServiceUnitTest {
     @Mock
     private SubscriptionPlanRepository subscriptionPlanRepository;
 
-    @Mock
-    private RidesRepository ridesRepository;
-
     @InjectMocks
     private BillingService billingService;
 

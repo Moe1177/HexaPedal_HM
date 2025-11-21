@@ -1,8 +1,6 @@
 package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.BaseIntegrationTest;
-import com.hexpedal.backend.dto.BillingHistoryDto;
-import com.hexpedal.backend.dto.TripSummaryDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
