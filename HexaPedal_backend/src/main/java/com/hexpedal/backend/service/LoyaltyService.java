@@ -45,17 +45,17 @@ public class LoyaltyService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
         
-        // Skip loyalty evaluation for guest users
+
         if (user.getIsGuest() != null && user.getIsGuest()) {
             return null;
         }
         
         RiderLoyalty loyalty = getOrCreateLoyalty(user);
 
-        // Update statistics
+
         updateStatistics(loyalty, userId);
 
-        // Determine new tier
+
         LoyaltyTier newTier = calculateTier(loyalty, userId);
 
         if (newTier != loyalty.getCurrentTier()) {
@@ -115,7 +115,7 @@ public class LoyaltyService {
 
         switch (targetTier) {
             case NONE -> {
-                // No criteria for NONE tier
+
             }
             case BRONZE -> criteria.addAll(checkBronzeCriteria(loyalty));
             case SILVER -> {
@@ -135,7 +135,7 @@ public class LoyaltyService {
     private List<CriteriaStatusDto> checkBronzeCriteria(RiderLoyalty loyalty) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
-        // BR-001: No missed reservations
+
         int missedReservations = loyalty.getMissedReservationsLastYear();
         if (missedReservations == 0) {
             criteria.add(CriteriaStatusDto.met(
@@ -150,7 +150,7 @@ public class LoyaltyService {
             ));
         }
 
-        // BR-002: All bikes returned successfully
+
         boolean allReturned = loyalty.getTotalTrips() == loyalty.getTotalSuccessfulReturns();
         if (allReturned) {
             criteria.add(CriteriaStatusDto.met(
@@ -166,7 +166,7 @@ public class LoyaltyService {
             ));
         }
 
-        // BR-003: At least 10 trips in last year
+
         int tripsLastYear = loyalty.getTripsLastYear();
         if (tripsLastYear >= 10) {
             criteria.add(CriteriaStatusDto.met(
@@ -187,7 +187,7 @@ public class LoyaltyService {
     private List<CriteriaStatusDto> checkSilverSpecificCriteria(RiderLoyalty loyalty, Long userId) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
-        // SL-002: At least 5 successful claimed reservations
+
         int claimedReservations = loyalty.getSuccessfulClaimedReservationsLastYear();
         if (claimedReservations >= 5) {
             criteria.add(CriteriaStatusDto.met(
@@ -202,7 +202,7 @@ public class LoyaltyService {
             ));
         }
 
-        // SL-003: 5 trips per month for last 3 months
+
         MonthlyProgress monthlyProgress = calculateMonthlyProgress(userId, 5, 3);
         if (monthlyProgress.allMonthsMet()) {
             criteria.add(CriteriaStatusDto.met(
@@ -223,7 +223,7 @@ public class LoyaltyService {
     private List<CriteriaStatusDto> checkGoldSpecificCriteria(Long userId) {
         List<CriteriaStatusDto> criteria = new ArrayList<>();
 
-        // GL-002: 5 trips per week for last 12 weeks (3 months)
+
         WeeklyProgress weeklyProgress = calculateWeeklyProgress(userId, 5, 12);
         if (weeklyProgress.allWeeksMet()) {
             criteria.add(CriteriaStatusDto.met(
@@ -248,10 +248,10 @@ public class LoyaltyService {
         LocalDateTime now = LocalDateTime.now();
 
         for (int i = 0; i < months; i++) {
-            // Start of the target month (e.g., i=0 means current month, i=1 means last month)
+
             LocalDateTime monthStart = now.minusMonths(i).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
 
-            // Start of the next month (exclusive end boundary)
+
             LocalDateTime monthEnd = monthStart.plusMonths(1);
 
             Instant monthStartInstant = monthStart.atZone(ZoneId.systemDefault()).toInstant();
@@ -311,7 +311,7 @@ public class LoyaltyService {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("%d/%d weeks completed | ", weeksMet, totalWeeks));
 
-        // Show details for recent 4 weeks
+
         for (int i = 0; i < Math.min(4, progress.weeks().size()); i++) {
             WeekData week = progress.weeks().get(i);
             if (i > 0) sb.append(" | ");
@@ -325,7 +325,7 @@ public class LoyaltyService {
         return sb.toString();
     }
 
-    // Helper records
+
     private record MonthData(int monthNumber, int actualTrips, int requiredTrips) {
         boolean met() {
             return actualTrips >= requiredTrips;
@@ -354,7 +354,7 @@ public class LoyaltyService {
     private void updateStatistics(RiderLoyalty loyalty, Long userId) {
         Instant oneYearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
 
-        // Update trip statistics from Rides table
+
         List<Rides> allRides = ridesRepo.findByUserId(Math.toIntExact(userId));
         List<Rides> ridesLastYear = allRides.stream()
                 .filter(r -> r.getStartTimestamp() != null && r.getStartTimestamp().isAfter(oneYearAgo))
@@ -363,31 +363,30 @@ public class LoyaltyService {
         loyalty.setTotalTrips(allRides.size());
         loyalty.setTripsLastYear(ridesLastYear.size());
         
-        // BR-002: Assume all completed rides are successful returns (design decision 1c)
+
         loyalty.setTotalSuccessfulReturns(allRides.size());
 
-        // Update reservation statistics from ReservationHistory table
-        // BR-001: Count expired reservations in the last year
+
         long missedReservations = reservationHistoryRepo.countExpiredReservationsLastYear(userId, oneYearAgo);
         loyalty.setMissedReservationsLastYear((int) missedReservations);
 
-        // SL-002: Count claimed reservations in the last year
+
         long claimedReservations = reservationHistoryRepo.countClaimedReservationsLastYear(userId, oneYearAgo);
         loyalty.setSuccessfulClaimedReservationsLastYear((int) claimedReservations);
     }
 
     private LoyaltyTier calculateTier(RiderLoyalty loyalty, Long userId) {
-        // Check Gold tier (GL-001, GL-002, GL-003)
+
         if (meetsGoldCriteria(loyalty, userId)) {
             return LoyaltyTier.GOLD;
         }
 
-        // Check Silver tier (SL-001, SL-002, SL-003, SL-004)
+
         if (meetsSilverCriteria(loyalty, userId)) {
             return LoyaltyTier.SILVER;
         }
 
-        // Check Bronze tier (BR-001, BR-002, BR-003, BR-004)
+
         if (meetsBronzeCriteria(loyalty)) {
             return LoyaltyTier.BRONZE;
         }
@@ -396,17 +395,17 @@ public class LoyaltyService {
     }
 
     private boolean meetsBronzeCriteria(RiderLoyalty loyalty) {
-        // BR-001: No missed reservations within last year
+
         if (loyalty.getMissedReservationsLastYear() > 0) {
             return false;
         }
 
-        // BR-002: Returned all bikes successfully
+
         if (loyalty.getTotalTrips() != loyalty.getTotalSuccessfulReturns()) {
             return false;
         }
 
-        // BR-003: Surpassed 10 trips in the last year
+
         if (loyalty.getTripsLastYear() < 10) {
             return false;
         }
@@ -415,17 +414,17 @@ public class LoyaltyService {
     }
 
     private boolean meetsSilverCriteria(RiderLoyalty loyalty, Long userId) {
-        // SL-001: Must meet Bronze tier eligibility
+
         if (!meetsBronzeCriteria(loyalty)) {
             return false;
         }
 
-        // SL-002: At least 5 successful claimed reservations last year
+
         if (loyalty.getSuccessfulClaimedReservationsLastYear() < 5) {
             return false;
         }
 
-        // SL-003: Surpassed 5 trips per month for last 3 months
+
         if (!meetsMonthlyTripRequirement(userId, 5, 3)) {
             return false;
         }
@@ -434,12 +433,12 @@ public class LoyaltyService {
     }
 
     private boolean meetsGoldCriteria(RiderLoyalty loyalty, Long userId) {
-        // GL-001: Must meet Silver tier eligibility
+
         if (!meetsSilverCriteria(loyalty, userId)) {
             return false;
         }
 
-        // GL-002: Surpasses 5 trips every week for last 3 months
+
         if (!meetsWeeklyTripRequirement(userId, 5, 12)) { // 12 weeks = 3 months
             return false;
         }
@@ -511,7 +510,7 @@ public class LoyaltyService {
     public int getReservationHoldMinutes(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         
-        // Guest users get default 10 minutes, no tier bonuses
+
         if (user != null && user.getIsGuest() != null && user.getIsGuest()) {
             return 10;
         }

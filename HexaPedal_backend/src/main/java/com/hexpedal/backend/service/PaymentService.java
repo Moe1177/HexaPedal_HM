@@ -46,18 +46,18 @@ public class PaymentService {
         User user = userRepo.findById(userId).orElseThrow();
         String customerId = ensureStripeCustomer(user);
 
-        // Attach pm to customer
+
         Map<String, Object> attachParams = new HashMap<>();
         attachParams.put("customer", customerId);
         com.stripe.model.PaymentMethod pm = com.stripe.model.PaymentMethod.retrieve(stripePaymentMethodId);
         pm = pm.attach(attachParams);
 
-        // Optionally set as default on the customer
+
         Map<String, Object> invoiceSettings = Map.of("default_payment_method", stripePaymentMethodId);
         com.stripe.model.Customer updated = com.stripe.model.Customer.retrieve(customerId)
                 .update(Map.of("invoice_settings", invoiceSettings));
 
-        // Extract safe card details for your DB
+
         com.stripe.model.PaymentMethod.Card card = pm.getCard();
 
         PaymentMethod entity = PaymentMethod.builder()
@@ -75,7 +75,7 @@ public class PaymentService {
                 .active(true)
                 .build();
 
-        // If setting default, unset previous default
+
         paymentMethodRepo.findByUserIdAndDefaultMethodTrue(userId)
                 .ifPresent(old -> {
                     old.setDefaultMethod(false);
@@ -96,10 +96,7 @@ public class PaymentService {
         };
     }
 
-    /**
-     * Create a Stripe Checkout Session for subscription
-     * Returns a URL that frontend should redirect user to
-     */
+
     @Transactional
     public String createCheckoutSession(Long userId, PlanType planType, String successUrl, String cancelUrl)
             throws Exception {
@@ -114,10 +111,10 @@ public class PaymentService {
             throw new RuntimeException("Stripe price ID not configured for plan: " + planType);
         }
 
-        // Ensure customer exists in Stripe
+
         String customerId = ensureStripeCustomer(user);
 
-        // Cancel any existing active subscription for this user
+
         userSubscriptionRepo.findActiveSubscriptionByUserId(userId)
                 .ifPresent(existing -> {
                     try {
@@ -129,7 +126,7 @@ public class PaymentService {
                     }
                 });
 
-        // Create Checkout Session
+
         Map<String, Object> params = new HashMap<>();
         params.put("customer", customerId);
         params.put("mode", "subscription");
@@ -142,7 +139,7 @@ public class PaymentService {
         params.put("success_url", successUrl);
         params.put("cancel_url", cancelUrl);
 
-        // Store user ID in metadata to identify on webhook
+
         params.put("metadata", Map.of("userId", userId.toString()));
 
         com.stripe.model.checkout.Session session =
@@ -151,10 +148,7 @@ public class PaymentService {
         return session.getUrl();
     }
 
-    /**
-     * Create a Stripe subscription for a user (Direct API method)
-     * Use createCheckoutSession for hosted checkout page instead
-     */
+
     @Transactional
     public UserSubscription createSubscription(Long userId, PlanType planType, String paymentMethodId)
             throws Exception {
@@ -171,15 +165,15 @@ public class PaymentService {
 
         Optional<UserSubscription> activeSubOpt = userSubscriptionRepo.findActiveSubscriptionByUserId(userId);
         if (activeSubOpt.isPresent() && activeSubOpt.get().getPlan().getPlanType() == planType) {
-            // Subscription already exists for this plan, return it instead of creating a new one
+
             return activeSubOpt.get();
         }
 
 
-        // Ensure customer exists
+
         String customerId = ensureStripeCustomer(user);
 
-        // Attach payment method if provided
+
         if (paymentMethodId != null) {
             Map<String, Object> attachParams = new HashMap<>();
             attachParams.put("customer", customerId);
@@ -192,7 +186,7 @@ public class PaymentService {
             com.stripe.model.Customer.retrieve(customerId).update(customerParams);
         }
 
-        // Cancel existing active subscription
+
         userSubscriptionRepo.findActiveSubscriptionByUserId(userId)
                 .ifPresent(existing -> {
                     try {
@@ -204,7 +198,7 @@ public class PaymentService {
                     }
                 });
 
-        // Create subscription and immediately confirm the first invoice
+
         Map<String, Object> subscriptionParams = new HashMap<>();
         subscriptionParams.put("customer", customerId);
         subscriptionParams.put("items", new Object[]{Map.of("price", plan.getStripePriceId())});
@@ -216,21 +210,10 @@ public class PaymentService {
 
 
 
-        // After creating subscription
+
         com.stripe.model.Invoice invoice = stripeSubscription.getLatestInvoiceObject();
         com.stripe.model.PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
 
-//        if (paymentIntent != null) {
-//            Map<String, Object> confirmParams = new HashMap<>();
-//            confirmParams.put("payment_method", paymentIntent.getPaymentMethod());
-//            paymentIntent.confirm(confirmParams);
-//
-//            // Refresh the subscription from Stripe
-//            stripeSubscription = com.stripe.model.Subscription.retrieve(stripeSubscription.getId());
-//        }
-
-
-        // Save subscription in database
         UserSubscription userSubscription = UserSubscription.builder()
                 .user(user)
                 .plan(plan)
@@ -247,37 +230,31 @@ public class PaymentService {
     }
 
 
-    /**
-     * Cancel a subscription at period end
-     */
+
     @Transactional
     public UserSubscription cancelSubscription(Long userId) throws StripeException {
         UserSubscription subscription = userSubscriptionRepo.findActiveSubscriptionByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("No active subscription found"));
 
-        // Cancel in Stripe at period end
+
         com.stripe.model.Subscription stripeSubscription =
                 com.stripe.model.Subscription.retrieve(subscription.getStripeSubscriptionId());
 
         stripeSubscription.cancel();
         subscription.setStatus(SubscriptionStatus.CANCELLED);
-        subscription.setCancelAtPeriodEnd(true); // optional, just for record
+        subscription.setCancelAtPeriodEnd(true);
 
         return userSubscriptionRepo.save(subscription);
     }
 
-    /**
-     * Immediately cancel a subscription in Stripe
-     */
+
     private void cancelSubscriptionInStripe(String stripeSubscriptionId) throws StripeException {
         com.stripe.model.Subscription stripeSubscription =
                 com.stripe.model.Subscription.retrieve(stripeSubscriptionId);
         stripeSubscription.cancel();
     }
 
-    /**
-     * Handle Stripe webhook events for subscriptions
-     */
+
     @Transactional
     public void handleSubscriptionWebhook(com.stripe.model.Subscription stripeSubscription) {
         userSubscriptionRepo.findByStripeSubscriptionId(stripeSubscription.getId())
@@ -292,9 +269,7 @@ public class PaymentService {
                 });
     }
 
-    /**
-     * Map Stripe subscription status to our enum
-     */
+
     private SubscriptionStatus mapStripeStatus(String stripeStatus) {
         return switch (stripeStatus) {
             case "active" -> SubscriptionStatus.ACTIVE;
@@ -307,9 +282,7 @@ public class PaymentService {
         };
     }
 
-    /**
-     * Process a one-time payment for a pay-per-trip charge
-     */
+
     @Transactional
     public void chargeForTrip(Long userId, double amount, String description) throws Exception {
         User user = userRepo.findById(userId)
@@ -317,17 +290,17 @@ public class PaymentService {
 
         String customerId = ensureStripeCustomer(user);
 
-        // Retrieve the default payment method
+
         PaymentMethod defaultPm = paymentMethodRepo.findByUserIdAndDefaultMethodTrue(userId)
                 .orElseThrow(() -> new RuntimeException("No default payment method found for user"));
 
         Map<String, Object> params = new HashMap<>();
-        params.put("amount", (long)(amount * 100)); // in cents
+        params.put("amount", (long)(amount * 100));
         params.put("currency", "cad");
         params.put("customer", customerId);
-        params.put("payment_method", defaultPm.getProviderPaymentMethodId()); // attach payment method
-        params.put("off_session", true); // charge without user interaction
-        params.put("confirm", true); // immediately confirm the PaymentIntent
+        params.put("payment_method", defaultPm.getProviderPaymentMethodId());
+        params.put("off_session", true);
+        params.put("confirm", true);
         params.put("description", description);
 
         com.stripe.model.PaymentIntent paymentIntent =

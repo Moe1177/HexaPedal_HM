@@ -32,7 +32,6 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 @AllArgsConstructor
 public class ReservationService {
-    //private static final int HOLD_MINUTES = 10;
     private final UserRepository userRepo;
     private final BikeRepository bikeRepo;
     private final DockRepository dockRepo;
@@ -60,7 +59,7 @@ public class ReservationService {
 
         var dock = dockRepo.findByBike_Id(bike.getId()).orElseThrow(() -> new IllegalStateException("Bike must be docked to be reserved."));
 
-        // Check if the station is out of service
+
         var station = dock.getStation();
         if (station != null && station.getStatus() == DockingStationStates.out_of_service) {
             throw new IllegalStateException("Cannot reserve bike from a station that is out of service.");
@@ -76,7 +75,7 @@ public class ReservationService {
 
         bikeRepo.save(bike);
 
-        // Create reservation history record
+
         Instant now = Instant.now();
         Instant expiryInstant = expiry.atZone(ZoneId.systemDefault()).toInstant();
         ReservationHistory history = ReservationHistory.builder()
@@ -102,7 +101,7 @@ public class ReservationService {
             throw new IllegalStateException("Bike is reserved by another user.");
         }
 
-        // Update reservation history to CANCELLED
+
         reservationHistoryRepo.findMostRecentPendingReservation(user.getId(), bikeId)
                 .ifPresent(history -> {
                     history.updateOutcome(ReservationOutcome.CANCELLED);
@@ -123,7 +122,7 @@ public class ReservationService {
         Bike bike;
         boolean hadReservation = false;
         
-        // Try to find reserved bike first (for both guest and registered users)
+
         var reservedBike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved);
         
         if (reservedBike.isPresent()) {
@@ -133,12 +132,12 @@ public class ReservationService {
             }
             hadReservation = true;
         } else {
-            // No reservation - allow direct start from available bike
+
             bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
                     .orElseThrow(() -> new IllegalStateException("Bike is not available. It may be reserved by another user or already in use."));
             hadReservation = false;
         }
-        // Update reservation history to CLAIMED (only if there was a reservation)
+
         if (hadReservation && (user.getIsGuest() == null || !user.getIsGuest())) {
             reservationHistoryRepo.findMostRecentPendingReservation(user.getId(), bikeId)
                     .ifPresent(history -> {
@@ -154,7 +153,7 @@ public class ReservationService {
         var station = dockstationRepo.findById(stationId)
                 .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
 
-        // Check if the station is out of service
+
         if (station.getStatus() == DockingStationStates.out_of_service) {
             throw new IllegalStateException("Cannot start trip from a station that is out of service.");
         }
@@ -172,7 +171,7 @@ public class ReservationService {
         bike.setTripStartTime(LocalDateTime.now());
         bike.setTripStartStationName(startStationName);
 
-        // Store destination information if provided
+
         if (destinationData != null && !destinationData.isEmpty()) {
             bike.setTripDestinationStationName((String) destinationData.get("stationName"));
             bike.setTripDestinationStationId(((Number) destinationData.get("stationId")).longValue());
@@ -206,7 +205,7 @@ public class ReservationService {
         emptyDock.setBike(bike);
         dockRepo.save(emptyDock);
 
-        // compute timings
+
         LocalDateTime startTimeLdt = bike.getTripStartTime();
         if (startTimeLdt == null) {
             throw new IllegalStateException("Trip start time is missing on bike " + bikeId);
@@ -226,12 +225,12 @@ public class ReservationService {
         String bikeType = bike.getType();
         double cost = billingService.calculateTripCost(userId, bikeType, durationMinutes);
 
-        // Apply flex dollars to reduce the cost before charging
+
         int flexDollarsUsed = 0;
         double finalCostToCharge = cost;
 
         if (cost > 0) {
-            // Apply flex dollars to the trip cost
+
             FlexDollarService.AppliedFlexDollarsResult flexResult =
                     flexdollarservice.applyFlexDollarsToTrip(userId, cost);
             flexDollarsUsed = flexResult.getFlexDollarsUsed();
@@ -244,8 +243,7 @@ public class ReservationService {
             }
         }
 
-        // create and save ride (R-PRC-04: maintain log of all trips and charges)
-        // Save the final cost (after flex dollars) as this is what the user actually paid
+
         Rides ride = new Rides();
         ride.setUser(user);
         ride.setBike(bike);
@@ -255,14 +253,14 @@ public class ReservationService {
         ride.setEndTimestamp(endTs);
         ride.setDuration(durationMinutes);
         ride.setDistance(distanceKm);
-        ride.setCost(finalCostToCharge); // Save final cost after flex dollars
+        ride.setCost(finalCostToCharge);
         ride.setFlexDollarsUsed(flexDollarsUsed);
         ridesRepo.save(ride);
 
-        // Check subscription status to determine proper messaging
+
         boolean hasActiveSubscription = userSubscriptionRepository.hasActiveSubscription(userId);
 
-        // Automatically charge payment if finalCostToCharge > 0 (after flex dollars applied)
+
         if (finalCostToCharge > 0) {
             try {
                 paymentService.chargeForTrip(
@@ -288,7 +286,6 @@ public class ReservationService {
             }
         }
 
-        // reset bike
         bike.setBikeStatus(BikeStatus.available);
         bike.setCurrentUser(null);
         bike.setTripStartTime(null);
@@ -301,8 +298,7 @@ public class ReservationService {
         
         if (user.getIsGuest() == null || !user.getIsGuest()) {
             loyaltyService.evaluateTier(userId);
-            
-            // Award flex dollars only if station is less than 25% filled AND user has no active subscription
+
             if (station.getNumberOfBikesDocked() < station.getBikeCapacity() * 0.25 && !hasActiveSubscription) {
                 flexdollarservice.addFlexDollars(user, 5);
             }
@@ -343,7 +339,7 @@ public class ReservationService {
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
 
-        // Find bike reserved by this user
+
         var reservedBike = bikeRepo.findByCurrentUserAndBikeStatus(user, BikeStatus.reserved);
 
         if (reservedBike.isEmpty()) {
@@ -371,7 +367,7 @@ public class ReservationService {
         var user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
 
-        // Find bike on trip by this user
+
         var activeBike = bikeRepo.findByCurrentUserAndBikeStatus(user, BikeStatus.on_trip);
 
         if (activeBike.isEmpty()) {

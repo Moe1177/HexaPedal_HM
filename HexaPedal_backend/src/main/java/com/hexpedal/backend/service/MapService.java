@@ -21,10 +21,7 @@ public class MapService implements MapEntityListener {
         initListener();
     }
 
-    /**
-     * Broadcast updated state to clients subscribed to /bms/live-updates endpoint.
-     * @param state is the updated state of a given Publisher entity
-     */
+
     public void update(MapEntity state) {
         messagingTemplate.convertAndSend("/bms/live-updates", state);
         // TODO: Remove Debug log
@@ -39,49 +36,36 @@ public class MapService implements MapEntityListener {
         return mapEntities;
     }
 
-    /**
-     * Turn the docking station into usable entities.
-     * @param stationMarkers list of docking stations
-     */
+
     private List<MapEntity> castIntoEntities(List<DockingStation> stationMarkers) {
         return new ArrayList<>(stationMarkers);
     }
 
-    /**
-     * Attach the listener to the publisher instance
-     */
+
     private void initListener() {
         for (MapEntity publisher: Map.getInstance().getMapEntities()){
             publisher.addListener(this);
         }
     }
 
-    /**
-     * Load the map entities into the map instance.
-     */
+
     private void initMapEntities() {
         List<MapEntity> mapEntities = castIntoEntities(dockingStationService.cacheDockingStations());
         Map.getInstance().setMapEntities(mapEntities);
     }
 
-    /**
-     * Add a new station entity to the map and attach listener
-     * @param station the newly created station to add
-     */
+
     public void addStationToMap(DockingStation station) {
         Map.getInstance().getMapEntities().add(station);
         station.addListener(this);
         System.out.println("Added station to map: " + station.getName() + " (ID: " + station.getId() + ")");
         
-        // Broadcast the new station to all connected clients
+
         messagingTemplate.convertAndSend("/bms/live-updates", station);
         System.out.println("Broadcasted new station via WebSocket: " + station.getName());
     }
 
-    /**
-     * Remove a station entity from the map
-     * @param stationId the ID of the station to remove
-     */
+
     public void removeStationFromMap(long stationId) {
         List<MapEntity> entities = Map.getInstance().getMapEntities();
         boolean removed = entities.removeIf(entity -> 
@@ -89,8 +73,6 @@ public class MapService implements MapEntityListener {
         );
         if (removed) {
             System.out.println("Removed station from map with ID: " + stationId);
-            // Notify clients that they should reload map entities
-            // We send a simple message indicating a station was deleted
             java.util.Map<String, Object> deleteNotification = new java.util.HashMap<>();
             deleteNotification.put("event", "station-deleted");
             deleteNotification.put("stationId", stationId);

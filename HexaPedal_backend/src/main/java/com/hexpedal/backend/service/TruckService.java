@@ -132,29 +132,20 @@ public class TruckService {
         bike.setBikeStatus(BikeStatus.available);
         bikeRepository.save(bike);
         truck.unloadBike(bike);
-        
-        // Refresh cached station and trigger WebSocket notification
         refreshAndNotifyCachedStation(stationId);
 
         return truckRepository.save(truck);
     }
     
-    /**
-     * Refresh cached station and notify WebSocket listeners after bike dock/undock
-     */
+
     private void refreshAndNotifyCachedStation(Long stationId) {
-        // Get fresh station data from database
         DockingStation freshStation = stationRepository.findById(stationId).orElse(null);
         if (freshStation == null) return;
-        
-        // Find and update the cached instance
         for (MapEntity entity : Map.getInstance().getMapEntities()) {
             if (entity instanceof DockingStation) {
                 DockingStation cachedStation = (DockingStation) entity;
                 if (cachedStation.getId().equals(stationId)) {
-                    // Update with fresh data (especially bike count)
                     cachedStation.setStatus(freshStation.getStatus());
-                    // Trigger notification - setStatus calls notifyListeners()
                     break;
                 }
             }

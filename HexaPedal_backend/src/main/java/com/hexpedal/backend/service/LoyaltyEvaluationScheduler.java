@@ -18,14 +18,11 @@ public class LoyaltyEvaluationScheduler {
     private final RiderLoyaltyRepository loyaltyRepo;
     private final LoyaltyService loyaltyService;
 
-    /**
-     * Evaluate all rider tiers daily at 2 AM
-     * This ensures tiers are kept up-to-date based on recent activity
-     */
+
     @Scheduled(cron = "0 0 2 * * *")
     @Transactional
     public void evaluateAllRiderTiers() {
-        System.out.println("🔄 Starting daily loyalty tier evaluation...");
+        System.out.println(" Starting daily loyalty tier evaluation...");
 
         List<RiderLoyalty> allLoyalties = loyaltyRepo.findAll();
         int upgraded = 0;
@@ -53,7 +50,7 @@ public class LoyaltyEvaluationScheduler {
         }
 
         System.out.println(String.format(
-                "✅ Tier evaluation complete: %d upgraded, %d downgraded, %d unchanged",
+                " Tier evaluation complete: %d upgraded, %d downgraded, %d unchanged",
                 upgraded, downgraded, unchanged
         ));
     }
@@ -61,7 +58,7 @@ public class LoyaltyEvaluationScheduler {
     @Scheduled(cron = "0 0 3 * * SUN")
     @Transactional
     public void cleanupStaleRecords() {
-        System.out.println("🧹 Cleaning up stale loyalty records...");
+        System.out.println(" Cleaning up stale loyalty records...");
 
         Instant oneYearAgo = Instant.now().minus(365, ChronoUnit.DAYS);
         List<RiderLoyalty> allLoyalties = loyaltyRepo.findAll();
@@ -72,7 +69,7 @@ public class LoyaltyEvaluationScheduler {
                     loyalty.getLastEvaluatedAt().isBefore(oneYearAgo) &&
                     loyalty.getTotalTrips() == 0) {
 
-                // Reset to NONE tier but keep the record
+
                 loyalty.setCurrentTier(com.hexpedal.backend.model.LoyaltyTier.NONE);
                 loyalty.setPreviousTier(com.hexpedal.backend.model.LoyaltyTier.NONE);
                 loyaltyRepo.save(loyalty);
