@@ -46,16 +46,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             subjectEmail = jwtService.extractUsername(jwt); // this returns email so that it can match with the JWT
         } catch (JwtException | IllegalArgumentException e) {
-
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
             return;
         }
 
         if (subjectEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(subjectEmail);
+            try {
+                UserDetails userDetails = this.userDetailsService.loadUserByUsername(subjectEmail);
 
-            if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails, null, userDetails.getAuthorities());
@@ -64,6 +64,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid token");
+                return;
+            }
+            } catch (RuntimeException e) {
+                // User not found (e.g., guest user was converted or deleted)
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("User not found or token is no longer valid");
                 return;
             }
         }

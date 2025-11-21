@@ -30,9 +30,6 @@ public class ReservationController {
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
     }
-  
-    
-    
 
     @PostMapping("/reservations/{bikeId}/cancel")
     public ResponseEntity<Void> cancelReservation(@PathVariable @Min(1) Integer bikeId) {
@@ -61,21 +58,6 @@ public class ReservationController {
         return ResponseEntity.noContent().build();
     }
 
-     @PostMapping("/trips/guest/{bikeId}/start")
-     public ResponseEntity<Void> startGuestTrip(@PathVariable Integer bikeId) {
-         reservationService.startGuestTrip(bikeId);
-         return ResponseEntity.noContent().build();
-     }
- 
-
-     @PostMapping("/trips/guest/return")
-     public ResponseEntity<Void> endGuestTrip(
-             @RequestParam @Min(1) Integer bikeId,
-             @RequestParam @Min(1) Long stationId
-     ) {
-         reservationService.endGuestTrip(bikeId, stationId);
-         return ResponseEntity.noContent().build();
-     }
 
     @GetMapping("/reservations/current")
     public ResponseEntity<com.hexpedal.backend.dto.UserReservationStatusDTO> getCurrentReservation() {

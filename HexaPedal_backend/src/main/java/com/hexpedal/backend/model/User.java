@@ -58,6 +58,9 @@ public class User implements UserDetails {
     @Column(name = "flex_dollars", nullable = false)
     private Integer flexDollars = 0;
 
+    @Column(name = "is_guest", nullable = false)
+    private Boolean isGuest = false;
+
     public User(String fullName, String address, String username, String email, String password) {
         this.fullName = fullName;
         this.address = address;
