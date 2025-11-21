@@ -20,6 +20,9 @@ import org.springframework.test.context.TestPropertySource;
         "STRIPE_SECRET_KEY=dummy_secret",
         "STRIPE_WEBHOOK_SECRET=dummy_webhook",
         "spring.sql.init.mode=never",
+        "spring.jpa.hibernate.ddl-auto=update",
+        "spring.jpa.defer-datasource-initialization=true",
+        "ORS_API_KEY=dummy-test-key",
 })
 public abstract class BaseIntegrationTest {
 

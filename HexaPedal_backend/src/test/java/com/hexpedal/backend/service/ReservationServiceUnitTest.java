@@ -14,14 +14,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyDouble;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +46,18 @@ public class ReservationServiceUnitTest {
     @Mock
     private PaymentService paymentService;
 
+    @Mock
+    private LoyaltyService loyaltyService;
+
+    @Mock
+    private FlexDollarService flexdollarservice;
+
+    @Mock
+    private UserSubscriptionRepository userSubscriptionRepository;
+
+    @Mock
+    private ReservationHistoryRepository reservationHistoryRepo;
+
     @InjectMocks
     private ReservationService reservationService;
 
@@ -62,6 +72,7 @@ public class ReservationServiceUnitTest {
                 .id(1L)
                 .email("test@example.com")
                 .fullName("Test User")
+                .isGuest(false)
                 .build();
 
         testBike = new Bike("Standard");
@@ -69,20 +80,20 @@ public class ReservationServiceUnitTest {
         testBike.setBikeStatus(BikeStatus.available);
 
         testStation = new DockingStation("Test Station", 45.5017, -73.5673, "123 Test St", 10);
+        testStation.setId(1L);
+        testStation.setStatus(DockingStationStates.active);
 
         testDock = new Dock();
         testDock.setId(1);
         testDock.setBike(testBike);
+        testDock.setStation(testStation); // FIX: Set the station on the dock
     }
 
     // Helper method to create a full station
     private DockingStation createFullStation() {
         DockingStation fullStation = new DockingStation("Full Station", 45.5017, -73.5673, "456 Full St", 10);
-        // Fill all docks with bikes
-        for (Dock dock : fullStation.getDocks()) {
-            Bike bike = new Bike("Standard");
-            dock.setBike(bike);
-        }
+        fullStation.setId(2L);
+        fullStation.setStatus(DockingStationStates.active);
         return fullStation;
     }
 
@@ -96,7 +107,9 @@ public class ReservationServiceUnitTest {
         when(bikeRepo.existsByCurrentUserAndBikeStatus(testUser, BikeStatus.on_trip)).thenReturn(false);
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.of(testBike));
         when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+        when(loyaltyService.getReservationHoldMinutes(1L)).thenReturn(10);
         when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
+        when(reservationHistoryRepo.save(any(ReservationHistory.class))).thenReturn(null);
 
         // Act
         reservationService.reserveBike("test@example.com", 1);
@@ -107,6 +120,8 @@ public class ReservationServiceUnitTest {
         assertThat(testBike.getReservationExpDate()).isNotNull();
         assertThat(testBike.getReservationExpTime()).isNotNull();
         verify(bikeRepo).save(testBike);
+        verify(reservationHistoryRepo).save(any(ReservationHistory.class));
+        verify(loyaltyService).evaluateTier(1L);
     }
 
     @Test
@@ -174,6 +189,23 @@ public class ReservationServiceUnitTest {
                 .hasMessageContaining("Bike must be docked to be reserved");
     }
 
+    @Test
+    public void reserveBike_StationOutOfService_ThrowsException() {
+        // Arrange
+        testStation.setStatus(DockingStationStates.out_of_service);
+
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.existsByCurrentUserAndBikeStatus(testUser, BikeStatus.reserved)).thenReturn(false);
+        when(bikeRepo.existsByCurrentUserAndBikeStatus(testUser, BikeStatus.on_trip)).thenReturn(false);
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.of(testBike));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+
+        // Act & Assert
+        assertThatThrownBy(() -> reservationService.reserveBike("test@example.com", 1))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Cannot reserve bike from a station that is out of service");
+    }
+
     // ========== cancelReservation Tests ==========
 
     @Test
@@ -186,6 +218,7 @@ public class ReservationServiceUnitTest {
 
         when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
+        when(reservationHistoryRepo.findMostRecentPendingReservation(1L, 1)).thenReturn(Optional.of(mock(ReservationHistory.class)));
         when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
 
         // Act
@@ -197,6 +230,7 @@ public class ReservationServiceUnitTest {
         assertThat(testBike.getReservationExpDate()).isNull();
         assertThat(testBike.getReservationExpTime()).isNull();
         verify(bikeRepo).save(testBike);
+        verify(reservationHistoryRepo).save(any(ReservationHistory.class));
     }
 
     @Test
@@ -241,60 +275,104 @@ public class ReservationServiceUnitTest {
     // ========== startTrip Tests ==========
 
     @Test
-    public void startTrip_Success_StartsTrip() {
+    public void startTrip_Success_StartsTripWithReservation() {
         // Arrange
         testBike.setBikeStatus(BikeStatus.reserved);
         testBike.setCurrentUser(testUser);
 
-        // Mock the dock to return the station
-        Dock mockDock = mock(Dock.class);
-
-        // Only stub the methods that are actually used by your service
-        when(mockDock.getStation()).thenReturn(testStation); // This is used in service
-
-        // Remove these if they're not used:
-        // when(mockDock.getId()).thenReturn(1);
-        // when(mockDock.getBike()).thenReturn(testBike);
-
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
-        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(mockDock));
-        when(dockstationRepo.findById(any())).thenReturn(Optional.of(testStation));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+        when(reservationHistoryRepo.findMostRecentPendingReservation(1L, 1)).thenReturn(Optional.of(mock(ReservationHistory.class)));
 
         // Act
-        reservationService.startTrip(1, "test@example.com");
+        reservationService.startTrip(1, "test@example.com", null);
 
         // Assert
         assertThat(testBike.getBikeStatus()).isEqualTo(BikeStatus.on_trip);
+        assertThat(testBike.getCurrentUser()).isEqualTo(testUser);
         assertThat(testBike.getReservationExpDate()).isNull();
         assertThat(testBike.getReservationExpTime()).isNull();
         assertThat(testBike.getTripStartTime()).isNotNull();
         assertThat(testBike.getTripStartStationName()).isEqualTo("Test Station");
-        verify(mockDock).setBike(null);
-        verify(dockRepo).save(mockDock);
+        verify(dockRepo).save(testDock);
+        verify(bikeRepo).save(testBike);
+        verify(reservationHistoryRepo).save(any(ReservationHistory.class));
+    }
+
+    @Test
+    public void startTrip_Success_StartsTripWithoutReservation() {
+        // Arrange
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.empty());
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.of(testBike));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+
+        // Act
+        reservationService.startTrip(1, "test@example.com", null);
+
+        // Assert
+        assertThat(testBike.getBikeStatus()).isEqualTo(BikeStatus.on_trip);
+        assertThat(testBike.getCurrentUser()).isEqualTo(testUser);
         verify(bikeRepo).save(testBike);
     }
 
     @Test
-    public void startTrip_BikeNotReserved_ThrowsException() {
+    public void startTrip_Success_WithDestinationData() {
         // Arrange
+        testBike.setBikeStatus(BikeStatus.reserved);
+        testBike.setCurrentUser(testUser);
+
+        Map<String, Object> destinationData = Map.of(
+                "stationName", "Destination Station",
+                "stationId", 2L,
+                "latitude", 45.5017,
+                "longitude", -73.5673
+        );
+
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+        when(reservationHistoryRepo.findMostRecentPendingReservation(1L, 1)).thenReturn(Optional.of(mock(ReservationHistory.class)));
+
+        // Act
+        reservationService.startTrip(1, "test@example.com", destinationData);
+
+        // Assert
+        assertThat(testBike.getTripDestinationStationName()).isEqualTo("Destination Station");
+        assertThat(testBike.getTripDestinationStationId()).isEqualTo(2L);
+        assertThat(testBike.getTripDestinationLatitude()).isEqualTo(45.5017);
+        assertThat(testBike.getTripDestinationLongitude()).isEqualTo(-73.5673);
+    }
+
+    @Test
+    public void startTrip_BikeNotReservedOrAvailable_ThrowsException() {
+        // Arrange
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.empty());
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com"))
+        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com", null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Bike is not reserved");
+                .hasMessageContaining("Bike is not available");
     }
 
     @Test
     public void startTrip_BikeReservedByAnotherUser_ThrowsException() {
         // Arrange
+        User otherUser = Rider.builder().id(2L).email("other@example.com").build();
         testBike.setBikeStatus(BikeStatus.reserved);
-        testBike.setCurrentUser(testUser);
+        testBike.setCurrentUser(otherUser);
 
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
 
         // Act & Assert
-        assertThatThrownBy(() -> reservationService.startTrip(1, "other@example.com"))
+        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com", null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Bike is reserved by another user");
     }
@@ -305,13 +383,32 @@ public class ReservationServiceUnitTest {
         testBike.setBikeStatus(BikeStatus.reserved);
         testBike.setCurrentUser(testUser);
 
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
         when(dockRepo.findByBike_Id(1)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com"))
+        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com", null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Bike is not docked");
+    }
+
+    @Test
+    public void startTrip_StationOutOfService_ThrowsException() {
+        // Arrange
+        testBike.setBikeStatus(BikeStatus.reserved);
+        testBike.setCurrentUser(testUser);
+        testStation.setStatus(DockingStationStates.out_of_service);
+
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
+        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+
+        // Act & Assert
+        assertThatThrownBy(() -> reservationService.startTrip(1, "test@example.com", null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Cannot start trip from a station that is out of service");
     }
 
     // ========== endTrip Tests ==========
@@ -328,7 +425,10 @@ public class ReservationServiceUnitTest {
         when(userRepo.findById(1L)).thenReturn(Optional.of(testUser));
         when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
         when(dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(1L)).thenReturn(Optional.of(testDock));
-        when(billingService.calculateTripCost(anyLong(), anyDouble())).thenReturn(15.0);
+        when(billingService.calculateTripCost(anyLong(), eq("Standard"), anyDouble())).thenReturn(15.0);
+        when(userSubscriptionRepository.hasActiveSubscription(1L)).thenReturn(false);
+        when(flexdollarservice.applyFlexDollarsToTrip(1L, 15.0))
+                .thenReturn(new FlexDollarService.AppliedFlexDollarsResult(0, 15.0));
         when(ridesRepo.save(any(Rides.class))).thenReturn(new Rides());
         when(dockRepo.save(any(Dock.class))).thenReturn(testDock);
         when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
@@ -345,6 +445,33 @@ public class ReservationServiceUnitTest {
         verify(paymentService).chargeForTrip(eq(1L), eq(15.0), anyString());
         verify(bikeRepo).save(testBike);
         verify(dockRepo).save(testDock);
+        verify(loyaltyService).evaluateTier(1L);
+    }
+
+    @Test
+    public void endTrip_WithFlexDollars_AppliesDiscount() throws Exception {
+        // Arrange
+        testBike.setBikeStatus(BikeStatus.on_trip);
+        testBike.setCurrentUser(testUser);
+        testBike.setTripStartTime(LocalDateTime.now().minusMinutes(30));
+
+        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
+        when(userRepo.findById(1L)).thenReturn(Optional.of(testUser));
+        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+        when(dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(1L)).thenReturn(Optional.of(testDock));
+        when(billingService.calculateTripCost(anyLong(), eq("Standard"), anyDouble())).thenReturn(15.0);
+        when(userSubscriptionRepository.hasActiveSubscription(1L)).thenReturn(false);
+        when(flexdollarservice.applyFlexDollarsToTrip(1L, 15.0))
+                .thenReturn(new FlexDollarService.AppliedFlexDollarsResult(10, 5.0));
+        when(ridesRepo.save(any(Rides.class))).thenReturn(new Rides());
+        when(dockRepo.save(any(Dock.class))).thenReturn(testDock);
+        when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
+
+        // Act
+        reservationService.endTrip(1, 1L, 1L);
+
+        // Assert
+        verify(paymentService).chargeForTrip(eq(1L), eq(5.0), anyString());
     }
 
     @Test
@@ -353,13 +480,14 @@ public class ReservationServiceUnitTest {
         testBike.setBikeStatus(BikeStatus.on_trip);
         testBike.setCurrentUser(testUser);
         testBike.setTripStartTime(LocalDateTime.now().minusMinutes(30));
-        testBike.setTripStartStationName("Start Station");
 
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
         when(userRepo.findById(1L)).thenReturn(Optional.of(testUser));
         when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
         when(dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(1L)).thenReturn(Optional.of(testDock));
-        when(billingService.calculateTripCost(anyLong(), anyDouble())).thenReturn(0.0);
+        when(billingService.calculateTripCost(anyLong(), eq("Standard"), anyDouble())).thenReturn(0.0);
+        when(userSubscriptionRepository.hasActiveSubscription(1L)).thenReturn(true);
+        // Remove the flexDollarservice mock since it won't be called when cost is 0
         when(ridesRepo.save(any(Rides.class))).thenReturn(new Rides());
         when(dockRepo.save(any(Dock.class))).thenReturn(testDock);
         when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
@@ -370,6 +498,8 @@ public class ReservationServiceUnitTest {
         // Assert
         verify(ridesRepo).save(any(Rides.class));
         verify(paymentService, never()).chargeForTrip(anyLong(), anyDouble(), anyString());
+        // Verify flexDollarservice.applyFlexDollarsToTrip is NOT called when cost is 0
+        verify(flexdollarservice, never()).applyFlexDollarsToTrip(anyLong(), anyDouble());
     }
 
     @Test
@@ -425,6 +555,7 @@ public class ReservationServiceUnitTest {
         when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
         when(userRepo.findById(1L)).thenReturn(Optional.of(testUser));
         when(dockstationRepo.findById(1L)).thenReturn(Optional.of(fullStation));
+        when(dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(1L)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThatThrownBy(() -> reservationService.endTrip(1, 1L, 1L))
@@ -471,6 +602,7 @@ public class ReservationServiceUnitTest {
 
         when(bikeRepo.findByBikeStatus(BikeStatus.reserved)).thenReturn(List.of(expiredBike, validBike));
         when(bikeRepo.save(any(Bike.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservationHistoryRepo.findMostRecentPendingReservation(1L, 1)).thenReturn(Optional.of(mock(ReservationHistory.class)));
 
         // Act
         reservationService.expireReservations();
@@ -482,6 +614,7 @@ public class ReservationServiceUnitTest {
         assertThat(validBike.getCurrentUser()).isEqualTo(testUser);
         verify(bikeRepo, times(1)).save(expiredBike);
         verify(bikeRepo, never()).save(validBike);
+        verify(reservationHistoryRepo).save(any(ReservationHistory.class));
     }
 
     @Test
@@ -503,99 +636,72 @@ public class ReservationServiceUnitTest {
         verify(bikeRepo, never()).save(any(Bike.class));
     }
 
-    // ========== startGuestTrip Tests ==========
+    // ========== Additional Tests for New Methods ==========
 
     @Test
-    public void startGuestTrip_Success_StartsGuestTrip() {
+    public void getCurrentUserReservation_ReturnsReservation() {
         // Arrange
-        // Mock the dock to return the station
-        Dock mockDock = mock(Dock.class);
-        when(mockDock.getStation()).thenReturn(testStation);
+        testBike.setBikeStatus(BikeStatus.reserved);
+        testBike.setCurrentUser(testUser);
+        testBike.setReservationExpDate(LocalDate.now().plusDays(1));
+        testBike.setReservationExpTime(LocalTime.now().plusMinutes(10));
 
-        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.of(testBike));
-        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(mockDock));
-
-        // Fix: Allow null parameter or ensure station has non-null ID
-        when(dockstationRepo.findById(any())).thenReturn(Optional.of(testStation));
-        // OR be more explicit:
-        // when(dockstationRepo.findById(isNull())).thenReturn(Optional.of(testStation));
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByCurrentUserAndBikeStatus(testUser, BikeStatus.reserved)).thenReturn(Optional.of(testBike));
+        when(dockRepo.findByBike_Id(1)).thenReturn(Optional.of(testDock));
 
         // Act
-        reservationService.startGuestTrip(1);
+        var result = reservationService.getCurrentUserReservation("test@example.com");
 
         // Assert
-        assertThat(testBike.getBikeStatus()).isEqualTo(BikeStatus.on_trip);
-        assertThat(testBike.getCurrentUser()).isNull();
-        assertThat(testBike.getTripStartTime()).isNotNull();
-        assertThat(testBike.getTripStartStationName()).isEqualTo("Test Station");
-        verify(mockDock).setBike(null);
-        verify(bikeRepo).save(testBike);
-        verify(dockRepo).save(mockDock);
+        assertThat(result.hasReservation()).isTrue();
+        assertThat(result.bikeId()).isEqualTo(1);
+        assertThat(result.stationName()).isEqualTo("Test Station");
     }
 
     @Test
-    public void startGuestTrip_BikeNotAvailable_ThrowsException() {
+    public void getCurrentUserReservation_NoReservation_ReturnsEmpty() {
         // Arrange
-        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.available)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThatThrownBy(() -> reservationService.startGuestTrip(1))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Bike is not available for a guest trip");
-    }
-
-    // ========== endGuestTrip Tests ==========
-
-    @Test
-    public void endGuestTrip_Success_EndsGuestTrip() {
-        // Arrange
-        testBike.setBikeStatus(BikeStatus.on_trip);
-        testBike.setCurrentUser(null);
-
-        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
-        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
-        when(dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(1L)).thenReturn(Optional.of(testDock));
-        when(dockRepo.save(any(Dock.class))).thenReturn(testDock);
-        when(bikeRepo.save(any(Bike.class))).thenReturn(testBike);
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByCurrentUserAndBikeStatus(testUser, BikeStatus.reserved)).thenReturn(Optional.empty());
 
         // Act
-        reservationService.endGuestTrip(1, 1L);
+        var result = reservationService.getCurrentUserReservation("test@example.com");
 
         // Assert
-        assertThat(testBike.getBikeStatus()).isEqualTo(BikeStatus.available);
-        assertThat(testBike.getCurrentUser()).isNull();
-        assertThat(testDock.getBike()).isEqualTo(testBike);
-        verify(bikeRepo).save(testBike);
-        verify(dockRepo).save(testDock);
+        assertThat(result.hasReservation()).isFalse();
     }
 
     @Test
-    public void endGuestTrip_TripBelongsToRegisteredUser_ThrowsException() {
+    public void getCurrentUserTrip_ReturnsActiveTrip() {
         // Arrange
         testBike.setBikeStatus(BikeStatus.on_trip);
         testBike.setCurrentUser(testUser);
+        testBike.setTripStartTime(LocalDateTime.now().minusMinutes(10));
+        testBike.setTripStartStationName("Start Station");
 
-        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByCurrentUserAndBikeStatus(testUser, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
 
-        // Act & Assert
-        assertThatThrownBy(() -> reservationService.endGuestTrip(1, 1L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("This trip belongs to a registered user");
+        // Act
+        var result = reservationService.getCurrentUserTrip("test@example.com");
+
+        // Assert
+        assertThat(result.hasActiveTrip()).isTrue();
+        assertThat(result.bikeId()).isEqualTo(1);
+        assertThat(result.startStationName()).isEqualTo("Start Station");
     }
 
     @Test
-    public void endGuestTrip_StationFull_ThrowsException() {
+    public void getCurrentUserTrip_NoActiveTrip_ReturnsEmpty() {
         // Arrange
-        testStation.setBikeCapacity(10);
-        testBike.setBikeStatus(BikeStatus.on_trip);
-        testBike.setCurrentUser(null);
+        when(userRepo.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+        when(bikeRepo.findByCurrentUserAndBikeStatus(testUser, BikeStatus.on_trip)).thenReturn(Optional.empty());
 
-        when(bikeRepo.findByIdAndBikeStatus(1, BikeStatus.on_trip)).thenReturn(Optional.of(testBike));
-        when(dockstationRepo.findById(1L)).thenReturn(Optional.of(testStation));
+        // Act
+        var result = reservationService.getCurrentUserTrip("test@example.com");
 
-        // Act & Assert
-        assertThatThrownBy(() -> reservationService.endGuestTrip(1, 1L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("No empty dock available");
+        // Assert
+        assertThat(result.hasActiveTrip()).isFalse();
     }
 }

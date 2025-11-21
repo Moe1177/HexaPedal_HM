@@ -379,3 +379,9 @@ VALUES (4001, 2, 1001, 'CLAIMED', NOW() - INTERVAL '5 minutes', NOW() + INTERVAL
 INSERT INTO public.rides
 (ride_id, user_id, bike_id, start_location, end_location, duration, distance, start_timestamp, end_timestamp, cost)
 VALUES (6001, 1001, 1, 'Station A', 'Station B', 600, 2.3, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '50 minutes', 0);
+
+-- Add the missing is_guest column to users table
+ALTER TABLE users ADD COLUMN is_guest BOOLEAN DEFAULT false;
+
+-- Update the existing users to have is_guest = false
+UPDATE users SET is_guest = false WHERE is_guest IS NULL;
