@@ -44,11 +44,13 @@ public class JwtService {
 
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expirationTime) {
         String subject;
+        Long userId = null;
     
-        // Use email if available
+        // Use email if available and extract user ID
         if (userDetails instanceof com.hexpedal.backend.model.User) {
             com.hexpedal.backend.model.User user = (com.hexpedal.backend.model.User) userDetails;
             subject = user.getEmail();
+            userId = user.getId();
         } else {
             subject = userDetails.getUsername();
         }
@@ -56,6 +58,7 @@ public class JwtService {
         return Jwts.builder()
         .setClaims(extraClaims)
         .setSubject(subject)
+        .claim("userId", userId)
         .claim("role", userDetails.getAuthorities())
         .setIssuedAt(new Date(System.currentTimeMillis()))
         .setExpiration(new Date(System.currentTimeMillis() + expirationTime))

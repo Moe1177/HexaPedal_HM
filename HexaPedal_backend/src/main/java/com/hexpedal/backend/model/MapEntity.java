@@ -41,4 +41,14 @@ public abstract class MapEntity {
     public void removeListener(MapEntityListener mapEntityListener) {
         this.mapEntityListeners.remove(mapEntityListener);
     }
+
+    /**
+     * Copy listeners from another MapEntity instance
+     * Useful when replacing cached entities with fresh data
+     * @param other the MapEntity to copy listeners from
+     */
+    public void copyListenersFrom(MapEntity other) {
+        this.mapEntityListeners.clear();
+        this.mapEntityListeners.addAll(other.getMapEntityListeners());
+    }
 }

@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import { API_BASE_URL } from "@/app/services/utils/constants";
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -60,7 +65,9 @@ function SignUpFormInner() {
     setEmailTaken(null);
     if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(value)}`);
+      const res = await fetch(
+        `${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(value)}`
+      );
       if (res.ok) {
         const exists = await res.json();
         setEmailTaken(Boolean(exists));
@@ -72,7 +79,9 @@ function SignUpFormInner() {
     setUsernameTaken(null);
     if (!value) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/check-username?username=${encodeURIComponent(value)}`);
+      const res = await fetch(
+        `${API_BASE_URL}/auth/check-username?username=${encodeURIComponent(value)}`
+      );
       if (res.ok) {
         const exists = await res.json();
         setUsernameTaken(Boolean(exists));
@@ -89,24 +98,25 @@ function SignUpFormInner() {
     if (!password) return "Password is required";
     if (password.length < 6) return "Password must be at least 6 characters";
     if (password !== confirmPassword) return "Passwords do not match";
-    
+
     // Payment validation
     if (!cardholderName.trim()) return "Cardholder name is required";
     if (!line1.trim()) return "Billing address is required";
     if (!city.trim()) return "City is required";
     if (!state.trim()) return "State/Province is required";
     if (!postalCode.trim()) return "Postal code is required";
-    
+
     // Terms and conditions validation
-    if (!agreedToTerms) return "You must agree to the Terms of Service and Privacy Policy";
-    
+    if (!agreedToTerms)
+      return "You must agree to the Terms of Service and Privacy Policy";
+
     return null;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!stripe || !elements) {
       setErrorMessage("Stripe is not loaded. Please refresh the page.");
       return;
@@ -133,7 +143,7 @@ function SignUpFormInner() {
       setErrorMessage("Username already in use");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       // Step 1: Create Stripe Payment Method
@@ -187,7 +197,7 @@ function SignUpFormInner() {
           country,
         },
       };
-      
+
       const res = await fetch(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -212,8 +222,10 @@ function SignUpFormInner() {
       }
 
       const responseData = await res.json();
-      
-      setSuccessMessage("Registration successful. Please check your email for the verification code.");
+
+      setSuccessMessage(
+        "Registration successful. Please check your email for the verification code."
+      );
       const params = new URLSearchParams({ email });
       setTimeout(() => {
         setIsSubmitting(false);
@@ -232,8 +244,18 @@ function SignUpFormInner() {
         <div className="text-center mb-10">
           <Link href="/" className="inline-flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-sky-500">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z" strokeLinecap="round" strokeLinejoin="round" />
+              <svg
+                className="w-7 h-7 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  d="M12 2L22 7L22 17L12 22L2 17L2 7L12 2Z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <span className="text-2xl font-bold bg-gradient-to-r from-indigo-500 via-sky-400 to-indigo-500 bg-clip-text text-transparent tracking-tight">
@@ -251,7 +273,10 @@ function SignUpFormInner() {
         <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-10 border border-neutral-100 dark:border-neutral-800">
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+              <label
+                htmlFor="fullName"
+                className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+              >
                 Full name
               </label>
               <input
@@ -268,7 +293,10 @@ function SignUpFormInner() {
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+              >
                 Username
               </label>
               <input
@@ -287,15 +315,22 @@ function SignUpFormInner() {
                 placeholder="johndoe"
               />
               {usernameTaken === true && (
-                <p className="mt-2 text-xs text-red-600 dark:text-red-400">Username already in use</p>
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  Username already in use
+                </p>
               )}
               {usernameTaken === false && (
-                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Username available</p>
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  Username available
+                </p>
               )}
             </div>
 
             <div>
-              <label htmlFor="address" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+              <label
+                htmlFor="address"
+                className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+              >
                 Address
               </label>
               <input
@@ -312,7 +347,10 @@ function SignUpFormInner() {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+              >
                 Email address
               </label>
               <input
@@ -331,15 +369,22 @@ function SignUpFormInner() {
                 placeholder="you@example.com"
               />
               {emailTaken === true && (
-                <p className="mt-2 text-xs text-red-600 dark:text-red-400">Email already in use</p>
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  Email already in use
+                </p>
               )}
               {emailTaken === false && (
-                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">Email available</p>
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  Email available
+                </p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+              >
                 Password
               </label>
               <div className="relative">
@@ -370,7 +415,10 @@ function SignUpFormInner() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300"
+              >
                 Confirm password
               </label>
               <div className="relative">
@@ -390,7 +438,9 @@ function SignUpFormInner() {
                   onClick={() => setShowConfirmPassword((v) => !v)}
                   disabled={isSubmitting}
                   className="absolute inset-y-0 right-0 inline-flex items-center px-4 text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 disabled:opacity-50"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showConfirmPassword ? "Hide password" : "Show password"
+                  }
                 >
                   {showConfirmPassword ? "Hide" : "Show"}
                 </button>
@@ -399,10 +449,15 @@ function SignUpFormInner() {
 
             {/* Payment Information Section */}
             <div className="space-y-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-6">
-              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Payment Information</h2>
-              
+              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+                Payment Information
+              </h2>
+
               <div>
-                <label htmlFor="cardholderName" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                <label
+                  htmlFor="cardholderName"
+                  className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                >
                   Cardholder Name
                 </label>
                 <input
@@ -419,7 +474,9 @@ function SignUpFormInner() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">Card Details</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  Card Details
+                </label>
                 <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-5 py-3.5">
                   <CardElement
                     options={{
@@ -438,7 +495,10 @@ function SignUpFormInner() {
               </div>
 
               <div>
-                <label htmlFor="line1" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                <label
+                  htmlFor="line1"
+                  className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                >
                   Billing Address Line 1
                 </label>
                 <input
@@ -455,7 +515,10 @@ function SignUpFormInner() {
               </div>
 
               <div>
-                <label htmlFor="line2" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                <label
+                  htmlFor="line2"
+                  className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                >
                   Billing Address Line 2 (Optional)
                 </label>
                 <input
@@ -472,7 +535,10 @@ function SignUpFormInner() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="city" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  <label
+                    htmlFor="city"
+                    className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                  >
                     City
                   </label>
                   <input
@@ -489,7 +555,10 @@ function SignUpFormInner() {
                 </div>
 
                 <div>
-                  <label htmlFor="state" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  <label
+                    htmlFor="state"
+                    className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                  >
                     State/Province
                   </label>
                   <input
@@ -508,7 +577,10 @@ function SignUpFormInner() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="postalCode" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  <label
+                    htmlFor="postalCode"
+                    className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                  >
                     Postal Code
                   </label>
                   <input
@@ -525,7 +597,10 @@ function SignUpFormInner() {
                 </div>
 
                 <div>
-                  <label htmlFor="country" className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
+                  <label
+                    htmlFor="country"
+                    className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300"
+                  >
                     Country
                   </label>
                   <select
@@ -546,7 +621,10 @@ function SignUpFormInner() {
 
             {errorMessage && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                <p
+                  className="text-sm text-red-600 dark:text-red-400"
+                  role="alert"
+                >
                   {errorMessage}
                 </p>
               </div>
@@ -554,7 +632,10 @@ function SignUpFormInner() {
 
             {successMessage && (
               <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                <p className="text-sm text-emerald-600 dark:text-emerald-400" role="status">
+                <p
+                  className="text-sm text-emerald-600 dark:text-emerald-400"
+                  role="status"
+                >
                   {successMessage}
                 </p>
               </div>
@@ -571,11 +652,17 @@ function SignUpFormInner() {
               />
               <span className="text-sm text-neutral-700 dark:text-neutral-300">
                 I agree to the{" "}
-                <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link
+                  href="#"
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link
+                  href="#"
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
                   Privacy Policy
                 </Link>
               </span>
@@ -590,13 +677,54 @@ function SignUpFormInner() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Already have an account?{" "}
-              <Link href="/dashboard/login" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
-                Sign in
+          <div className="mt-6 space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Already have an account?{" "}
+                <Link
+                  href="/dashboard/login"
+                  className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
+                  or
+                </span>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <Link
+                href="/dashboard/guest"
+                className="inline-flex items-center justify-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
+                </svg>
+                Continue as guest
               </Link>
-            </p>
+              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                Try HexaPedal first without creating an account
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -612,7 +740,8 @@ export default function SignUpPage() {
           <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-10 border border-neutral-100 dark:border-neutral-800">
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <p className="text-sm text-red-600 dark:text-red-400">
-                <strong>Stripe configuration error.</strong> Check your NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+                <strong>Stripe configuration error.</strong> Check your
+                NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
               </p>
             </div>
           </div>

@@ -98,13 +98,9 @@ public class SubscriptionController {
     }
 
     @GetMapping("/current")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getCurrentSubscription(@AuthenticationPrincipal User user) {
-        
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can view subscriptions");
-        }
-
+    
         Optional<UserSubscription> subscription = 
                 userSubscriptionRepository.findActiveSubscriptionByUserId(user.getId());
         
@@ -116,13 +112,9 @@ public class SubscriptionController {
     }
 
     @GetMapping("/status")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getSubscriptionStatus(@AuthenticationPrincipal User user) {
-        
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can check subscription status");
-        }
-
+       
         boolean hasActive = userSubscriptionRepository.hasActiveSubscription(user.getId());
         return ResponseEntity.ok(new SubscriptionStatusResponse(hasActive));
     }

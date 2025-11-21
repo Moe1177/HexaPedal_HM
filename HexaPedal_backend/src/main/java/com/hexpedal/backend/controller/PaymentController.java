@@ -9,10 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -20,6 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    @GetMapping("/methods")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<PaymentMethodDto> getPaymentMethod(@AuthenticationPrincipal User user) {
+        return paymentService.getDefaultPaymentMethod(user.getId())
+                .map(pm -> ResponseEntity.ok(PaymentMethodDto.from(pm)))
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     @PostMapping("/methods/stripe")
     @PreAuthorize("isAuthenticated()")

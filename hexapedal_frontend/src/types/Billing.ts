@@ -1,4 +1,4 @@
-export type PlanType = "pay-per-ride" | "hourly" | "monthly" | "annual";
+export type PlanType = "MONTHLY" | "YEARLY" | "PAY_PER_TRIP";
 
 export interface UserPlan {
   id: number;
@@ -24,7 +24,7 @@ export interface BillingHistory {
 }
 
 export interface BillingSummary {
-  currentPlan: UserPlan;
+  currentPlan: UserPlan | null;
   totalSpent: number;
   ridesThisMonth: number;
   ridesThisYear: number;
@@ -32,3 +32,36 @@ export interface BillingSummary {
   billingHistory: BillingHistory[];
 }
 
+// Backend DTOs
+export interface PricingPlan {
+  id: number;
+  planType: PlanType;
+  name: string;
+  price: number;
+  description: string;
+  ratePerMinute: number;
+}
+
+export type SubscriptionStatus = "ACTIVE" | "CANCELLED" | "EXPIRED" | "PENDING";
+
+export interface Subscription {
+  id: number;
+  planType: PlanType;
+  planName: string;
+  planPrice: number;
+  status: SubscriptionStatus;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface CheckoutSessionRequest {
+  planType: PlanType;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface CheckoutSessionResponse {
+  checkoutUrl: string;
+  message: string;
+}

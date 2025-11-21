@@ -2,8 +2,11 @@ package com.hexpedal.backend.service;
 
 import com.hexpedal.backend.dto.CreateTruckRequestDTO;
 import com.hexpedal.backend.model.Bike;
+import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.Dock;
 import com.hexpedal.backend.model.DockingStation;
+import com.hexpedal.backend.model.Map;
+import com.hexpedal.backend.model.MapEntity;
 import com.hexpedal.backend.model.Truck;
 import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
@@ -14,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
 
 import java.util.List;
 
@@ -26,7 +30,25 @@ public class TruckService {
     private final DockRepository dockRepository;
     private final DockingStationRepository stationRepository;
 
+    @Transactional
+    public void ensureBikesOnTrucksHaveMaintenanceStatus() {
+        List<Truck> trucks = truckRepository.findAll();
+        
+        for (Truck truck : trucks) {
+            for (Bike bike : truck.getBikes()) {
+                if (bike.getBikeStatus() != BikeStatus.maintenance) {
+                    Bike managedBike = bikeRepository.findById(bike.getId())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bike not found: " + bike.getId()));
+                    managedBike.setBikeStatus(BikeStatus.maintenance);
+                    bikeRepository.save(managedBike);
+                }
+            }
+        }
+    }
+
     public List<Truck> getAllTrucks() {
+        ensureBikesOnTrucksHaveMaintenanceStatus();
+        
         return truckRepository.findAll();
     }
 
@@ -43,6 +65,10 @@ public class TruckService {
         Truck truck = Truck.builder()
                 .capacity(req.capacity())
                 .build();
+    
+        if (truck.getBikes() == null) {
+            truck.setBikes(new java.util.ArrayList<>());
+        }
 
         return truckRepository.save(truck);
     }
@@ -59,17 +85,23 @@ public class TruckService {
         Bike bike = bikeRepository.findById(bikeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Bike not found: " + bikeId));
+        List<Truck> allTrucks = truckRepository.findAll();
+        for (Truck otherTruck : allTrucks) {
+            if (!otherTruck.getId().equals(truckId) && 
+                otherTruck.getBikes().stream().anyMatch(b -> b.getId() == bikeId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Bike " + bikeId + " is already on truck " + otherTruck.getId());
+            }
+        }
 
-        Dock dock = dockRepository.findByBike_Id(bikeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Bike " + bikeId + " is not currently docked in a station."));
-
-       
-        dock.setBike(null);
-        dockRepository.save(dock);
-
-       
-        truck.loadBike(bike);
+        dockRepository.findByBike_Id(bikeId).ifPresent(dock -> {
+            dock.setBike(null);
+            dockRepository.save(dock);
+        });
+        bike.setBikeStatus(BikeStatus.maintenance);
+        Bike savedBike = bikeRepository.save(bike);
+        
+        truck.loadBike(savedBike);
 
         return truckRepository.save(truck);
     }
@@ -87,19 +119,45 @@ public class TruckService {
         DockingStation station = stationRepository.findById(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Station not found: " + stationId));
-
+        if (station.getStatus() == com.hexpedal.backend.model.DockingStationStates.out_of_service) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot unload bike: station " + stationId + " is out of service.");
+        }
 
         Dock emptyDock = dockRepository.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "No empty dock available at station " + stationId));
-
-
         emptyDock.setBike(bike);
         dockRepository.save(emptyDock);
-
-        // Remove from truck
+        bike.setBikeStatus(BikeStatus.available);
+        bikeRepository.save(bike);
         truck.unloadBike(bike);
+        
+        // Refresh cached station and trigger WebSocket notification
+        refreshAndNotifyCachedStation(stationId);
 
         return truckRepository.save(truck);
+    }
+    
+    /**
+     * Refresh cached station and notify WebSocket listeners after bike dock/undock
+     */
+    private void refreshAndNotifyCachedStation(Long stationId) {
+        // Get fresh station data from database
+        DockingStation freshStation = stationRepository.findById(stationId).orElse(null);
+        if (freshStation == null) return;
+        
+        // Find and update the cached instance
+        for (MapEntity entity : Map.getInstance().getMapEntities()) {
+            if (entity instanceof DockingStation) {
+                DockingStation cachedStation = (DockingStation) entity;
+                if (cachedStation.getId().equals(stationId)) {
+                    // Update with fresh data (especially bike count)
+                    cachedStation.setStatus(freshStation.getStatus());
+                    // Trigger notification - setStatus calls notifyListeners()
+                    break;
+                }
+            }
+        }
     }
 }

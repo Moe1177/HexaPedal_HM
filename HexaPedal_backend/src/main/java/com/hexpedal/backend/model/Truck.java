@@ -28,12 +28,24 @@ public class Truck {
     )
     @Builder.Default
     private List<Bike> bikes = new ArrayList<>();
+    public List<Bike> getBikes() {
+        if (bikes == null) {
+            bikes = new ArrayList<>();
+        }
+        return bikes;
+    }
 
     public boolean isFull() {
+        if (bikes == null) {
+            bikes = new ArrayList<>();
+        }
         return bikes.size() >= capacity;
     }
 
     public void loadBike(Bike bike) {
+        if (bikes == null) {
+            bikes = new ArrayList<>();
+        }
         if (isFull()) {
             throw new IllegalStateException("Truck is full, cannot load more bikes.");
         }
@@ -43,6 +55,16 @@ public class Truck {
     }
 
     public void unloadBike(Bike bike) {
+        if (bikes == null) {
+            bikes = new ArrayList<>();
+        }
         bikes.remove(bike);
+    }
+    
+    @PostLoad
+    private void initializeBikes() {
+        if (bikes == null) {
+            bikes = new ArrayList<>();
+        }
     }
 }

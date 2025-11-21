@@ -27,6 +27,12 @@ public class Bike {
     private LocalDateTime tripStartTime;
 
     private String tripStartStationName;
+    
+    // Destination information for navigation
+    private String tripDestinationStationName;
+    private Long tripDestinationStationId;
+    private Double tripDestinationLatitude;
+    private Double tripDestinationLongitude;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -35,6 +41,14 @@ public class Bike {
 
     @Transient
     private static final int RESERVATION_EXPIRY_MINUTES = 10;
+
+    @Transient
+    @JsonProperty("currentStationName")
+    private String currentStationName;
+
+    @Transient
+    @JsonProperty("currentStationId")
+    private Long currentStationId;
 
 
     public Bike() {
@@ -64,7 +78,34 @@ public class Bike {
     public void setTripStartStationName(String tripStartStationName) { 
         this.tripStartStationName = tripStartStationName; 
     }
-
+    
+    public String getTripDestinationStationName() {
+        return tripDestinationStationName;
+    }
+    public void setTripDestinationStationName(String tripDestinationStationName) {
+        this.tripDestinationStationName = tripDestinationStationName;
+    }
+    
+    public Long getTripDestinationStationId() {
+        return tripDestinationStationId;
+    }
+    public void setTripDestinationStationId(Long tripDestinationStationId) {
+        this.tripDestinationStationId = tripDestinationStationId;
+    }
+    
+    public Double getTripDestinationLatitude() {
+        return tripDestinationLatitude;
+    }
+    public void setTripDestinationLatitude(Double tripDestinationLatitude) {
+        this.tripDestinationLatitude = tripDestinationLatitude;
+    }
+    
+    public Double getTripDestinationLongitude() {
+        return tripDestinationLongitude;
+    }
+    public void setTripDestinationLongitude(Double tripDestinationLongitude) {
+        this.tripDestinationLongitude = tripDestinationLongitude;
+    }
 
     public void setId(int id) {
         this.id = id;
@@ -115,6 +156,22 @@ public class Bike {
     public Long getCurrentUserId() {
         if (currentUser == null) return null;
         return currentUser.getId();
+    }
+
+    public String getCurrentStationName() {
+        return currentStationName;
+    }
+
+    public void setCurrentStationName(String currentStationName) {
+        this.currentStationName = currentStationName;
+    }
+
+    public Long getCurrentStationId() {
+        return currentStationId;
+    }
+
+    public void setCurrentStationId(Long currentStationId) {
+        this.currentStationId = currentStationId;
     }
 
   

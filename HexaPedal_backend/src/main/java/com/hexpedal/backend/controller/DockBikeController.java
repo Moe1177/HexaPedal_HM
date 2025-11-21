@@ -4,6 +4,8 @@ import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.Dock;
 import com.hexpedal.backend.model.DockingStation;
 import com.hexpedal.backend.model.DockingStationStates;
+import com.hexpedal.backend.model.Map;
+import com.hexpedal.backend.model.MapEntity;
 import com.hexpedal.backend.repository.BikeRepository;
 import com.hexpedal.backend.repository.DockRepository;
 import com.hexpedal.backend.repository.DockingStationRepository;
@@ -28,6 +30,39 @@ public class DockBikeController {
         this.dockRepo = dockRepo;
         this.bikeRepo = bikeRepo;
         this.stationRepo = stationRepo;
+    }
+    
+    /**
+     * Refresh cached station and notify WebSocket listeners after bike dock/undock
+     */
+    private void refreshAndNotifyCachedStation(Long stationId) {
+        // Get fresh station data from database
+        DockingStation freshStation = stationRepo.findById(stationId).orElse(null);
+        if (freshStation == null) return;
+        
+        // Force load docks to get accurate bike count
+        if (freshStation.getDocks() != null) {
+            freshStation.getDocks().size();
+        }
+        
+        // Find and replace the cached instance entirely to ensure bike count is correct
+        java.util.List<MapEntity> entities = Map.getInstance().getMapEntities();
+        for (int i = 0; i < entities.size(); i++) {
+            MapEntity entity = entities.get(i);
+            if (entity instanceof DockingStation) {
+                DockingStation cachedStation = (DockingStation) entity;
+                if (cachedStation.getId().equals(stationId)) {
+                    // Copy listeners from old cached station to fresh station
+                    freshStation.copyListenersFrom(cachedStation);
+                    // Replace the cached station with fresh data
+                    entities.set(i, freshStation);
+                    // Trigger WebSocket notification with fresh data using the setStatus trick
+                    freshStation.setStatus(freshStation.getStatus());
+                    System.out.println("Updated cached station " + stationId + " with " + freshStation.getNumberOfBikesDocked() + " bikes");
+                    break;
+                }
+            }
+        }
     }
     @PostMapping("/{stationId}/{dockId}/bike/{bikeId}")
     public ResponseEntity<?> dockBike(
@@ -60,6 +95,9 @@ public class DockBikeController {
   
     bike.setBikeStatus(com.hexpedal.backend.model.BikeStatus.available);
     bikeRepo.save(bike);
+    
+    // Refresh cached station data and trigger WebSocket notification
+    refreshAndNotifyCachedStation(stationId);
 
     return ResponseEntity.noContent().build();
     }

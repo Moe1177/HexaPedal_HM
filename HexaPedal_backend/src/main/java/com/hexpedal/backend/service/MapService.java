@@ -31,11 +31,12 @@ public class MapService implements MapEntityListener {
         System.out.println("Updated the map with this updated state: " + state);
     }
 
-    /**
-     * List all the entities on top of the map.
-     */
     public List<MapEntity> getMapEntities(){
-        return Map.getInstance().getMapEntities();
+        List<DockingStation> freshStations = dockingStationService.cacheDockingStations();
+        List<MapEntity> mapEntities = castIntoEntities(freshStations);
+        Map.getInstance().setMapEntities(mapEntities);
+        initListener();
+        return mapEntities;
     }
 
     /**
@@ -61,5 +62,40 @@ public class MapService implements MapEntityListener {
     private void initMapEntities() {
         List<MapEntity> mapEntities = castIntoEntities(dockingStationService.cacheDockingStations());
         Map.getInstance().setMapEntities(mapEntities);
+    }
+
+    /**
+     * Add a new station entity to the map and attach listener
+     * @param station the newly created station to add
+     */
+    public void addStationToMap(DockingStation station) {
+        Map.getInstance().getMapEntities().add(station);
+        station.addListener(this);
+        System.out.println("Added station to map: " + station.getName() + " (ID: " + station.getId() + ")");
+        
+        // Broadcast the new station to all connected clients
+        messagingTemplate.convertAndSend("/bms/live-updates", station);
+        System.out.println("Broadcasted new station via WebSocket: " + station.getName());
+    }
+
+    /**
+     * Remove a station entity from the map
+     * @param stationId the ID of the station to remove
+     */
+    public void removeStationFromMap(long stationId) {
+        List<MapEntity> entities = Map.getInstance().getMapEntities();
+        boolean removed = entities.removeIf(entity -> 
+            entity instanceof DockingStation && ((DockingStation) entity).getId().equals(stationId)
+        );
+        if (removed) {
+            System.out.println("Removed station from map with ID: " + stationId);
+            // Notify clients that they should reload map entities
+            // We send a simple message indicating a station was deleted
+            java.util.Map<String, Object> deleteNotification = new java.util.HashMap<>();
+            deleteNotification.put("event", "station-deleted");
+            deleteNotification.put("stationId", stationId);
+            messagingTemplate.convertAndSend("/bms/live-updates", deleteNotification);
+            System.out.println("Broadcasted station deletion via WebSocket: ID " + stationId);
+        }
     }
 }

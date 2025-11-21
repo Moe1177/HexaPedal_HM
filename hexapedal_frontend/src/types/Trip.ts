@@ -1,6 +1,6 @@
 export interface Trip {
   id: number;
-  bikeId: number;
+  bikeId?: number;
   userId: number;
   startStationId: number;
   startStationName?: string;
@@ -12,4 +12,3 @@ export interface Trip {
   cost: number | null;
   status: "active" | "completed" | "cancelled";
 }
-

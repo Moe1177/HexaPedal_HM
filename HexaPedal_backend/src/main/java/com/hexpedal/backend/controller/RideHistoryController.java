@@ -1,6 +1,7 @@
 package com.hexpedal.backend.controller;
 
-import com.hexpedal.backend.model.Rider;
+import com.hexpedal.backend.dto.RideAuditDto;
+import com.hexpedal.backend.dto.RideHistoryDto;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.service.RideHistoryService;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @AllArgsConstructor
@@ -23,15 +25,14 @@ public class RideHistoryController {
     private final RideHistoryService rideHistoryService;
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('RIDER') or hasRole('OPERATOR')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getAllRidesForUser(
             @AuthenticationPrincipal User authenticatedUser,
             @PathVariable Integer userId) {
 
-        if (authenticatedUser instanceof Rider) {
-            if (!(authenticatedUser.getId() ==(userId.longValue()))) {
-                return ResponseEntity.status(403).body("You can only view your own ride history");
-            }
+
+        if (!(authenticatedUser.getId() == userId.longValue())) {
+            return ResponseEntity.status(403).body("You can only view your own ride history");
         }
 
         List<Rides> rides = rideHistoryService.getRidesByUserId(userId);
@@ -40,13 +41,22 @@ public class RideHistoryController {
 
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('RIDER')")
+    @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getMyRideHistory(@AuthenticationPrincipal User user) {
-        if (!(user instanceof Rider)) {
-            return ResponseEntity.status(403).body("Only riders can view ride history");
-        }
 
         List<Rides> rides = rideHistoryService.getRidesByUserId(Math.toIntExact(user.getId()));
-        return ResponseEntity.ok(rides);
+        List<RideHistoryDto> rideHistory = rides.stream()
+                .map(RideHistoryDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rideHistory);
+    }
+    @GetMapping("/audit/all")
+    @PreAuthorize("hasRole('OPERATOR')")
+    public ResponseEntity<?> getAllRidesForAudit(@AuthenticationPrincipal User user) {
+        List<Rides> rides = rideHistoryService.getAllRides();
+        List<RideAuditDto> auditLog = rides.stream()
+                .map(RideAuditDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(auditLog);
     }
 }

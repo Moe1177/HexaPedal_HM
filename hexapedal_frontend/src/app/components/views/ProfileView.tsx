@@ -18,7 +18,12 @@ export default function ProfileView() {
       const userEmail = getEmailFromToken(token);
       const id = getUserIdFromToken(token);
       setEmail(userEmail);
-      setUserId(id);
+      // Only set userId if it's a valid number (not NaN)
+      if (id !== null && !isNaN(id) && typeof id === 'number') {
+        setUserId(id);
+      } else {
+        setUserId(null);
+      }
     }
     setIsLoading(false);
   }, [token]);
@@ -68,23 +73,27 @@ export default function ProfileView() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                Email Address
-              </label>
-              <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                <p className="text-neutral-900 dark:text-neutral-100">{email || "N/A"}</p>
+            {email && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                  Email Address
+                </label>
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                  <p className="text-neutral-900 dark:text-neutral-100">{email}</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                User ID
-              </label>
-              <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
-                <p className="text-neutral-900 dark:text-neutral-100">{userId || "N/A"}</p>
+            {userId !== null && !isNaN(userId) && (
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                  User ID
+                </label>
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
+                  <p className="text-neutral-900 dark:text-neutral-100">{userId}</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -120,12 +129,6 @@ export default function ProfileView() {
             <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
               <span className="text-neutral-600 dark:text-neutral-400">Account Type</span>
               <span className="font-medium text-neutral-900 dark:text-neutral-100">Rider</span>
-            </div>
-            <div className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-700">
-              <span className="text-neutral-600 dark:text-neutral-400">Member Since</span>
-              <span className="font-medium text-neutral-900 dark:text-neutral-100">
-                {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-              </span>
             </div>
             <div className="flex items-center justify-between py-3">
               <span className="text-neutral-600 dark:text-neutral-400">Status</span>
