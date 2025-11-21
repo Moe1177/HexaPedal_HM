@@ -22,11 +22,13 @@ interface BackendRide {
  */
 function mapBackendRideToTrip(backendRide: BackendRide): Trip {
   const hasEnded = backendRide.endTimestamp != null;
-  
+
   // Generate simple numeric IDs from location strings (hash-based approach)
   const startStationId = Math.abs(hashString(backendRide.startLocation));
-  const endStationId = hasEnded ? Math.abs(hashString(backendRide.endLocation)) : null;
-  
+  const endStationId = hasEnded
+    ? Math.abs(hashString(backendRide.endLocation))
+    : null;
+
   return {
     id: backendRide.ride_id,
     bikeId: backendRide.bikeId ?? undefined,
@@ -47,37 +49,39 @@ function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; 
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
   }
   return hash;
 }
 
-export async function getRides(userId: number | null, token?: string | null): Promise<Trip[]> {
+export async function getRides(
+  userId: number | null,
+  token?: string | null
+): Promise<Trip[]> {
   if (!token) {
     throw new Error("Token is required");
   }
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   };
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/ride-history/me`,
-    {
-      method: "GET",
-      headers,
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/ride-history/me`, {
+    method: "GET",
+    headers,
+  });
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => "Failed to fetch rides");
+    const errorText = await response
+      .text()
+      .catch(() => "Failed to fetch rides");
     throw new Error(errorText || "Failed to fetch rides");
   }
 
   const data: BackendRide[] = await response.json();
-  
+
   // Map backend rides to frontend Trip format
   const trips = data.map((ride) => {
     const trip = mapBackendRideToTrip(ride);
@@ -85,7 +89,6 @@ export async function getRides(userId: number | null, token?: string | null): Pr
     trip.userId = userId ?? 0;
     return trip;
   });
-  
+
   return trips;
 }
-
