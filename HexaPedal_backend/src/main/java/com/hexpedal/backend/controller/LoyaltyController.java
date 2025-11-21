@@ -25,10 +25,10 @@ public class LoyaltyController {
     @PreAuthorize("hasAnyRole('RIDER', 'OPERATOR')")
     public ResponseEntity<?> getLoyaltyStatus(@AuthenticationPrincipal User user) {
         try {
-            RiderLoyalty loyalty = loyaltyService.evaluateTier(user.getId());
-            TierProgressDto progress = loyaltyService.calculateTierProgress(user.getId());
+        RiderLoyalty loyalty = loyaltyService.evaluateTier(user.getId());
+        TierProgressDto progress = loyaltyService.calculateTierProgress(user.getId());
 
-            return ResponseEntity.ok(LoyaltyStatusDto.from(loyalty, progress));
+        return ResponseEntity.ok(LoyaltyStatusDto.from(loyalty, progress));
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body("Failed to fetch loyalty status: " + e.getMessage());

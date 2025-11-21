@@ -57,7 +57,7 @@ export default function StationDetailsModal({
     setIsReserving(true);
     setError(null);
     try {
-      await reserveBike(bikeId, email, token);
+      await reserveBike(bikeId, token);
       if (onReserveBike) {
         onReserveBike(bikeId);
       }

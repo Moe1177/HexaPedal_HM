@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../../utils/constants";
 
-export async function reserveBike(bikeId: number, email: string, token?: string | null): Promise<void> {
+export async function reserveBike(bikeId: number, token?: string | null): Promise<void> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
@@ -10,7 +10,7 @@ export async function reserveBike(bikeId: number, email: string, token?: string 
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/api/reservations/bikes/${bikeId}?email=${encodeURIComponent(email)}`,
+    `${API_BASE_URL}/api/reservations/bikes/${bikeId}`,
     {
       method: "POST",
       headers,

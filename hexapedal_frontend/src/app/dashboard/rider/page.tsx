@@ -291,7 +291,7 @@ export default function RiderDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      await reserveBike(bikeId, email, token);
+      await reserveBike(bikeId, token);
       setActiveReservation({ bikeId, reservedAt: new Date(), expiresAt: undefined });
       setShowReserveModal(false);
       
