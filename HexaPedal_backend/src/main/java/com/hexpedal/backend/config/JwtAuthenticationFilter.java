@@ -45,9 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             subjectEmail = jwtService.extractUsername(jwt); // this returns email so that it can match with the JWT
-            System.out.println("JWT authentication - extracted email: " + subjectEmail);
         } catch (JwtException | IllegalArgumentException e) {
-            System.err.println("JWT extraction failed: " + e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
             return;
@@ -55,9 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (subjectEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                System.out.println("Loading user details for: " + subjectEmail);
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(subjectEmail);
-                System.out.println("User details loaded successfully");
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
@@ -71,9 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             } catch (RuntimeException e) {
-                // User not found
-                System.err.println("User lookup failed: " + e.getMessage());
-                e.printStackTrace();
+                // User not found (e.g., guest user was converted or deleted)
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("User not found or token is no longer valid");
                 return;

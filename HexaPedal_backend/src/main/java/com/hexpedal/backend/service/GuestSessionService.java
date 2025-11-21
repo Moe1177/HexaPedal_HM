@@ -46,8 +46,6 @@ public class GuestSessionService {
                 .build();
 
         User savedGuest = userRepository.saveAndFlush(guestUser);
-        
-        System.out.println("Created guest user with email: " + savedGuest.getEmail() + ", ID: " + savedGuest.getId());
 
         // Save payment method for the guest user
         PaymentMethod paymentMethod = paymentService.saveStripePaymentMethod(
@@ -58,7 +56,6 @@ public class GuestSessionService {
         );
 
         String token = jwtService.generateToken(savedGuest);
-        System.out.println("Generated JWT token for guest user");
 
         return new GuestSessionResponse(
                 savedGuest.getId(),
@@ -100,20 +97,17 @@ public class GuestSessionService {
 
         User convertedUser = userRepository.save(guestUser);
         
-        System.out.println("Guest user converted to registered user. User ID: " + convertedUser.getId() + ", Email: " + email);
-        
         // Initialize loyalty record for the converted user
         try {
             loyaltyService.getOrCreateLoyalty(convertedUser);
-            System.out.println("Loyalty record initialized for converted user");
         } catch (Exception e) {
-            System.err.println("Failed to create loyalty record: " + e.getMessage());
+            // Log error but don't fail conversion
         }
         
         try {
             sendVerificationEmail(convertedUser);
         } catch (Exception e) {
-            System.err.println("Failed to send verification email: " + e.getMessage());
+            // Log error but don't fail conversion
         }
 
         // Don't generate token - user must verify email first
@@ -133,7 +127,6 @@ public class GuestSessionService {
         
         if (guestUser != null && guestUser.getIsGuest() != null && guestUser.getIsGuest()) {
             userRepository.delete(guestUser);
-            System.out.println("Deleted guest user: " + guestUser.getEmail());
         }
     }
 

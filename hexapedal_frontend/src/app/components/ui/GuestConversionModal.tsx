@@ -157,7 +157,6 @@ export default function GuestConversionModal({
       // Force full page reload to ensure all state is fresh
       window.location.href = "/dashboard/rider";
     } catch (err) {
-      console.error("Verification error:", err);
       const message =
         err instanceof Error ? err.message : "Verification failed";
       setError(message);
