@@ -28,10 +28,9 @@ public class GuestSessionService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public GuestSessionResponse createGuestSession(String paymentMethodId, BillingAddress billingAddress, String cardholderName) throws Exception {
-        // Generate unique guest credentials
         String guestUuid = UUID.randomUUID().toString();
-        String guestEmail = "guest_" + guestUuid + "@hexapedal.temp";
-        String guestUsername = "guest_" + guestUuid.substring(0, 8);
+        String guestEmail = generateUniqueGuestEmail();
+        String guestUsername = generateUniqueGuestUsername();
         String guestPassword = UUID.randomUUID().toString();
 
         Rider guestUser = Rider.builder()
@@ -47,7 +46,6 @@ public class GuestSessionService {
 
         User savedGuest = userRepository.saveAndFlush(guestUser);
 
-        // Save payment method for the guest user
         PaymentMethod paymentMethod = paymentService.saveStripePaymentMethod(
                 savedGuest.getId(),
                 paymentMethodId,
@@ -63,6 +61,40 @@ public class GuestSessionService {
                 jwtService.getExpirationTime(),
                 guestEmail
         );
+    }
+
+    private String generateUniqueGuestEmail() {
+        String guestEmail;
+        int maxAttempts = 10;
+        int attempts = 0;
+
+        do {
+            if (attempts >= maxAttempts) {
+                throw new RuntimeException("Failed to generate unique guest email after " + maxAttempts + " attempts");
+            }
+            String guestUuid = UUID.randomUUID().toString();
+            guestEmail = "guest_" + guestUuid + "@hexapedal.temp";
+            attempts++;
+        } while (userRepository.findByEmail(guestEmail).isPresent());
+
+        return guestEmail;
+    }
+
+    private String generateUniqueGuestUsername() {
+        String guestUsername;
+        int maxAttempts = 10;
+        int attempts = 0;
+
+        do {
+            if (attempts >= maxAttempts) {
+                throw new RuntimeException("Failed to generate unique guest username after " + maxAttempts + " attempts");
+            }
+            String guestUuid = UUID.randomUUID().toString();
+            guestUsername = "guest_" + guestUuid.substring(0, 8);
+            attempts++;
+        } while (userRepository.findByUsername(guestUsername).isPresent());
+
+        return guestUsername;
     }
 
     @Transactional
@@ -122,11 +154,12 @@ public class GuestSessionService {
     }
 
     @Transactional
-    public void deleteGuestUser(Long guestUserId) {
+    public void archiveGuestUser(Long guestUserId) {
         User guestUser = userRepository.findById(guestUserId).orElse(null);
         
         if (guestUser != null && guestUser.getIsGuest() != null && guestUser.getIsGuest()) {
-            userRepository.delete(guestUser);
+            guestUser.setEnabled(false);
+            userRepository.save(guestUser);
         }
     }
 
