@@ -158,4 +158,8 @@ public class DockingStation extends MapEntity {
         notifyListeners(this);
         return dock.removeBike();
     }
+
+    public void setId(long l) {
+        this.id = l;
+    }
 }

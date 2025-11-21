@@ -49,7 +49,7 @@ public class BillingServiceUnitTest {
         when(userSubscriptionRepository.findActiveSubscriptionByUserId(1L)).thenReturn(Optional.of(userSubscription));
         when(subscriptionPlanRepository.findByPlanType(PlanType.PAY_PER_TRIP)).thenReturn(Optional.of(testSubscriptionPlan));
 
-        double testCost = billingService.calculateTripCost(1L, 5);
+        double testCost = billingService.calculateTripCost(1L, "electric", 5);
         Assertions.assertThat(testCost).isEqualTo(0.05);
     }
 
@@ -70,7 +70,7 @@ public class BillingServiceUnitTest {
 
         when(userSubscriptionRepository.findActiveSubscriptionByUserId(1L)).thenReturn(Optional.of(testActiveSubscription));
 
-        String testBreakdown = billingService.generateCostBreakdown(1L, 5, 0.05);
+        String testBreakdown = billingService.generateCostBreakdown(1L, "electric", 5, 0.05);
 
         Assertions.assertThat(testBreakdown).contains("Pay-per-trip:");
     }

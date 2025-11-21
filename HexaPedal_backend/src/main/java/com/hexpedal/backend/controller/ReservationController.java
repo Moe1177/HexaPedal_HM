@@ -25,7 +25,7 @@ public class ReservationController {
     @PostMapping("/reservations/bikes/{bikeId}")
     public ResponseEntity<Void> reserveBike(@PathVariable Integer bikeId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName(); 
+        String email = auth.getName();
         
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
