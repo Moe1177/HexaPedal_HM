@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStationDetails, StationDetails, DockInfo } from "@/app/services/stations/getStationDetails";
+import {
+  getStationDetails,
+  StationDetails,
+  DockInfo,
+} from "@/app/services/stations/getStationDetails";
 import { reserveBike } from "@/app/services/user/rider/reserveBike";
 import { getEmailFromToken } from "@/app/services/user/getCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
+import GuestPaymentModal from "./GuestPaymentModal";
 
 interface StationDetailsModalProps {
   stationId: number | null;
@@ -20,10 +25,16 @@ export default function StationDetailsModal({
   onReserveBike,
 }: StationDetailsModalProps) {
   const { token } = useAuth();
-  const [stationDetails, setStationDetails] = useState<StationDetails | null>(null);
+  const [stationDetails, setStationDetails] = useState<StationDetails | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReserving, setIsReserving] = useState(false);
+  const [guestPaymentModalOpen, setGuestPaymentModalOpen] = useState(false);
+  const [selectedGuestBikeId, setSelectedGuestBikeId] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (isOpen && stationId) {
@@ -34,7 +45,11 @@ export default function StationDetailsModal({
           setStationDetails(data);
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : "Failed to load station details");
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load station details"
+          );
         })
         .finally(() => {
           setIsLoading(false);
@@ -67,14 +82,21 @@ export default function StationDetailsModal({
       const updated = await getStationDetails(stationId!);
       setStationDetails(updated);
       // Show success alert
-      alert(`Bike #${bikeId} reserved successfully! You have 10 minutes to unlock it.`);
+      alert(
+        `Bike #${bikeId} reserved successfully! You have 10 minutes to unlock it.`
+      );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to reserve bike";
-      
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to reserve bike";
+
       // If error indicates user already has a reservation, provide helpful message
-      if (errorMessage.toLowerCase().includes("already has a reserved bike") || 
-          errorMessage.toLowerCase().includes("already has a reservation")) {
-        setError("You already have a bike reserved. Please check your dashboard sidebar to see which bike is reserved and unlock or cancel it first.");
+      if (
+        errorMessage.toLowerCase().includes("already has a reserved bike") ||
+        errorMessage.toLowerCase().includes("already has a reservation")
+      ) {
+        setError(
+          "You already have a bike reserved. Please check your dashboard sidebar to see which bike is reserved and unlock or cancel it first."
+        );
       } else {
         setError(errorMessage);
       }
@@ -83,11 +105,29 @@ export default function StationDetailsModal({
     }
   };
 
+  const handleGuestRentBike = (bikeId: number) => {
+    setSelectedGuestBikeId(bikeId);
+    setGuestPaymentModalOpen(true);
+  };
+
+  const handleGuestPaymentSuccess = (guestToken: string) => {
+    setGuestPaymentModalOpen(false);
+    setSelectedGuestBikeId(null);
+    onClose();
+    window.location.href = "/dashboard/guest";
+  };
+
   if (!isOpen) return null;
 
-  const availableBikes = stationDetails?.docks.filter((dock) => !dock.empty && dock.bike && dock.bike.bikeStatus === "available") || [];
+  const availableBikes =
+    stationDetails?.docks.filter(
+      (dock) => !dock.empty && dock.bike && dock.bike.bikeStatus === "available"
+    ) || [];
   const emptyDocks = stationDetails?.docks.filter((dock) => dock.empty) || [];
-  const unavailableBikes = stationDetails?.docks.filter((dock) => !dock.empty && dock.bike && dock.bike.bikeStatus !== "available") || [];
+  const unavailableBikes =
+    stationDetails?.docks.filter(
+      (dock) => !dock.empty && dock.bike && dock.bike.bikeStatus !== "available"
+    ) || [];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000] p-4">
@@ -95,14 +135,26 @@ export default function StationDetailsModal({
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 px-6 py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-            {isLoading ? "Loading..." : stationDetails?.name || "Station Details"}
+            {isLoading
+              ? "Loading..."
+              : stationDetails?.name || "Station Details"}
           </h2>
           <button
             onClick={onClose}
             className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -146,15 +198,20 @@ export default function StationDetailsModal({
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400">Capacity</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Capacity
+                    </p>
                     <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                       {stationDetails.bikeCapacity} docks
                     </p>
                   </div>
                   <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400">Bikes Docked</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Bikes Docked
+                    </p>
                     <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-                      {stationDetails.numberOfBikesDocked}/{stationDetails.bikeCapacity}
+                      {stationDetails.numberOfBikesDocked}/
+                      {stationDetails.bikeCapacity}
                     </p>
                   </div>
                 </div>
@@ -164,11 +221,22 @@ export default function StationDetailsModal({
               {stationDetails.status === "out_of_service" && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <svg
+                      className="w-5 h-5 text-red-600 dark:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
                     <p className="text-sm font-medium text-red-600 dark:text-red-400">
-                      This station is currently out of service. Bike reservations are not available.
+                      This station is currently out of service. Bike
+                      reservations are not available.
                     </p>
                   </div>
                 </div>
@@ -182,36 +250,60 @@ export default function StationDetailsModal({
                     Available Bikes ({availableBikes.length})
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {availableBikes.map((dock) => (
-                      dock.bike && (
-                        <div
-                          key={dock.id}
-                          className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                              Bike #{dock.bike.id}
-                            </span>
-                            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                              Available
-                            </span>
-                          </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-                            Type: {dock.bike.type}
-                          </p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-                            Dock: #{dock.id}
-                          </p>
-                          <button
-                            onClick={() => handleReserveBike(dock.bike!.id)}
-                            disabled={isReserving || stationDetails.status === "out_of_service"}
-                            className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    {availableBikes.map(
+                      (dock) =>
+                        dock.bike && (
+                          <div
+                            key={dock.id}
+                            className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg"
                           >
-                            {isReserving ? "Reserving..." : stationDetails.status === "out_of_service" ? "Unavailable" : "Reserve"}
-                          </button>
-                        </div>
-                      )
-                    ))}
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                Bike #{dock.bike.id}
+                              </span>
+                              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                Available
+                              </span>
+                            </div>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+                              Type: {dock.bike.type}
+                            </p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+                              Dock: #{dock.id}
+                            </p>
+                            {token ? (
+                              <button
+                                onClick={() => handleReserveBike(dock.bike!.id)}
+                                disabled={
+                                  isReserving ||
+                                  stationDetails.status === "out_of_service"
+                                }
+                                className="w-full mt-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isReserving
+                                  ? "Reserving..."
+                                  : stationDetails.status === "out_of_service"
+                                    ? "Unavailable"
+                                    : "Reserve"}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleGuestRentBike(dock.bike!.id)
+                                }
+                                disabled={
+                                  stationDetails.status === "out_of_service"
+                                }
+                                className="w-full mt-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {stationDetails.status === "out_of_service"
+                                  ? "Unavailable"
+                                  : "Rent Now"}
+                              </button>
+                            )}
+                          </div>
+                        )
+                    )}
                   </div>
                 </div>
               )}
@@ -254,43 +346,58 @@ export default function StationDetailsModal({
                     Unavailable Bikes ({unavailableBikes.length})
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {unavailableBikes.map((dock) => (
-                      dock.bike && (
-                        <div
-                          key={dock.id}
-                          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                              Bike #{dock.bike.id}
-                            </span>
-                            <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                              {dock.bike.bikeStatus}
-                            </span>
+                    {unavailableBikes.map(
+                      (dock) =>
+                        dock.bike && (
+                          <div
+                            key={dock.id}
+                            className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                Bike #{dock.bike.id}
+                              </span>
+                              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
+                                {dock.bike.bikeStatus}
+                              </span>
+                            </div>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+                              Type: {dock.bike.type}
+                            </p>
+                            <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                              Dock: #{dock.id}
+                            </p>
                           </div>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-                            Type: {dock.bike.type}
-                          </p>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                            Dock: #{dock.id}
-                          </p>
-                        </div>
-                      )
-                    ))}
+                        )
+                    )}
                   </div>
                 </div>
               )}
 
-              {availableBikes.length === 0 && emptyDocks.length === 0 && unavailableBikes.length === 0 && (
-                <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
-                  <p>No dock information available</p>
-                </div>
-              )}
+              {availableBikes.length === 0 &&
+                emptyDocks.length === 0 &&
+                unavailableBikes.length === 0 && (
+                  <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
+                    <p>No dock information available</p>
+                  </div>
+                )}
             </>
           )}
         </div>
       </div>
+
+      {/* Guest Payment Modal */}
+      {selectedGuestBikeId && (
+        <GuestPaymentModal
+          isOpen={guestPaymentModalOpen}
+          onClose={() => {
+            setGuestPaymentModalOpen(false);
+            setSelectedGuestBikeId(null);
+          }}
+          bikeId={selectedGuestBikeId}
+          onSuccess={handleGuestPaymentSuccess}
+        />
+      )}
     </div>
   );
 }
-

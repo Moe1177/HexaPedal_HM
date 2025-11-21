@@ -8,6 +8,7 @@ import com.hexpedal.backend.repository.RidesRepository;
 import com.hexpedal.backend.repository.UserRepository;
 import com.hexpedal.backend.repository.UserSubscriptionRepository;
 import java.util.Objects;
+import java.util.Map;
 import java.time.ZoneId;
 import java.time.Instant;
 
@@ -15,6 +16,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
+import com.hexpedal.backend.model.Bike;
 import com.hexpedal.backend.model.BikeStatus;
 import com.hexpedal.backend.model.DockingStationStates;
 import com.hexpedal.backend.model.Rides;
@@ -115,21 +117,35 @@ public class ReservationService {
         bikeRepo.save(bike);
     }
 
-    public void startTrip(Integer bikeId, String email, java.util.Map<String, Object> destinationData){
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved)
-                .orElseThrow(() -> new IllegalStateException("Bike is not reserved."));
-
-        if (!Objects.equals(bike.getCurrentUser().getEmail(), email)) {
-            throw new IllegalStateException("Bike is reserved by another user.");
+    public void startTrip(Integer bikeId, String email, Map<String, Object> destinationData){
+        var user = userRepo.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+        
+        Bike bike;
+        boolean hadReservation = false;
+        
+        // Try to find reserved bike first (for both guest and registered users)
+        var reservedBike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.reserved);
+        
+        if (reservedBike.isPresent()) {
+            bike = reservedBike.get();
+            if (!Objects.equals(bike.getCurrentUser().getEmail(), email)) {
+                throw new IllegalStateException("Bike is reserved by another user.");
+            }
+            hadReservation = true;
+        } else {
+            // No reservation - allow direct start from available bike
+            bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
+                    .orElseThrow(() -> new IllegalStateException("Bike is not available. It may be reserved by another user or already in use."));
+            hadReservation = false;
         }
-
-        var user = bike.getCurrentUser();
-        // Update reservation history to CLAIMED
-        reservationHistoryRepo.findMostRecentPendingReservation(user.getId(), bikeId)
-                .ifPresent(history -> {
-                    history.updateOutcome(ReservationOutcome.CLAIMED);
-                    reservationHistoryRepo.save(history);
-                });
+        // Update reservation history to CLAIMED (only if there was a reservation)
+        if (hadReservation && (user.getIsGuest() == null || !user.getIsGuest())) {
+            reservationHistoryRepo.findMostRecentPendingReservation(user.getId(), bikeId)
+                    .ifPresent(history -> {
+                        history.updateOutcome(ReservationOutcome.CLAIMED);
+                        reservationHistoryRepo.save(history);
+                    });
+        }
 
         var dock = dockRepo.findByBike_Id(bikeId)
                 .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
@@ -149,6 +165,7 @@ public class ReservationService {
         dockRepo.save(dock);
 
         bike.setBikeStatus(BikeStatus.on_trip);
+        bike.setCurrentUser(user); 
         bike.setReservationExpDate(null);
         bike.setReservationExpTime(null);
 
@@ -281,11 +298,14 @@ public class ReservationService {
         bike.setTripDestinationLatitude(null);
         bike.setTripDestinationLongitude(null);
         bikeRepo.save(bike);
-        loyaltyService.evaluateTier(userId);
-
-        // Award flex dollars only if station is less than 25% filled AND user has no active subscription
-        if (station.getNumberOfBikesDocked() < station.getBikeCapacity() * 0.25 && !hasActiveSubscription) {
-            flexdollarservice.addFlexDollars(user, 5);
+        
+        if (user.getIsGuest() == null || !user.getIsGuest()) {
+            loyaltyService.evaluateTier(userId);
+            
+            // Award flex dollars only if station is less than 25% filled AND user has no active subscription
+            if (station.getNumberOfBikesDocked() < station.getBikeCapacity() * 0.25 && !hasActiveSubscription) {
+                flexdollarservice.addFlexDollars(user, 5);
+            }
         }
     }
 
@@ -318,60 +338,6 @@ public class ReservationService {
         }
     }
 
-    public void startGuestTrip(Integer bikeId) {
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.available)
-                .orElseThrow(() -> new IllegalStateException("Bike is not available for a guest trip."));
-
-        var dock = dockRepo.findByBike_Id(bikeId)
-                .orElseThrow(() -> new IllegalStateException("Bike is not docked."));
-
-        Long stationId = dock.getStation().getId();
-        var station = dockstationRepo.findById(stationId)
-                .orElseThrow(() -> new EntityNotFoundException("Station not found for dock " + dock.getId()));
-
-        String startStationName = station.getName();
-
-        dock.setBike(null);
-        dockRepo.save(dock);
-
-        bike.setBikeStatus(BikeStatus.on_trip);
-        bike.setCurrentUser(null);
-        bike.setReservationExpDate(null);
-        bike.setReservationExpTime(null);
-        bike.setTripStartTime(LocalDateTime.now());
-        bike.setTripStartStationName(startStationName);
-
-        bikeRepo.save(bike);
-    }
-
-    public void endGuestTrip(Integer bikeId, Long stationId) {
-        var bike = bikeRepo.findByIdAndBikeStatus(bikeId, BikeStatus.on_trip)
-                .orElseThrow(() -> new IllegalStateException("Bike is not on trip."));
-
-        if (bike.getCurrentUser() != null) {
-            throw new IllegalStateException("This trip belongs to a registered user.");
-        }
-
-        var station = dockstationRepo.findById(stationId)
-                .orElseThrow(() -> new EntityNotFoundException("Station not found: " + stationId));
-
-        if (station.getNumberOfBikesDocked() >= station.getBikeCapacity()) {
-            throw new IllegalStateException("No empty dock available at this station.");
-        }
-
-        var emptyDock = dockRepo.findFirstByStation_IdAndBikeIsNullOrderByIdAsc(stationId)
-                .orElseThrow(() -> new IllegalStateException("No empty dock available at this station."));
-
-        emptyDock.setBike(bike);
-        dockRepo.save(emptyDock);
-
-        bike.setBikeStatus(BikeStatus.available);
-        bike.setCurrentUser(null);
-        bike.setReservationExpDate(null);
-        bike.setReservationExpTime(null);
-
-        bikeRepo.save(bike);
-    }
 
     public UserReservationStatusDTO getCurrentUserReservation(String email) {
         var user = userRepo.findByEmail(email)

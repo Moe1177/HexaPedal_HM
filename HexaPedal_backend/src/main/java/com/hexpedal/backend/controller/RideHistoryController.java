@@ -1,6 +1,7 @@
 package com.hexpedal.backend.controller;
 
 import com.hexpedal.backend.dto.RideAuditDto;
+import com.hexpedal.backend.dto.RideHistoryDto;
 import com.hexpedal.backend.model.Rides;
 import com.hexpedal.backend.model.User;
 import com.hexpedal.backend.service.RideHistoryService;
@@ -44,7 +45,10 @@ public class RideHistoryController {
     public ResponseEntity<?> getMyRideHistory(@AuthenticationPrincipal User user) {
 
         List<Rides> rides = rideHistoryService.getRidesByUserId(Math.toIntExact(user.getId()));
-        return ResponseEntity.ok(rides);
+        List<RideHistoryDto> rideHistory = rides.stream()
+                .map(RideHistoryDto::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rideHistory);
     }
     @GetMapping("/audit/all")
     @PreAuthorize("hasRole('OPERATOR')")

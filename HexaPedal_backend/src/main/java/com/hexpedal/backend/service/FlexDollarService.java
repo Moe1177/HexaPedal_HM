@@ -15,9 +15,9 @@ public class FlexDollarService {
     }
 
     public User addFlexDollars(User user, int amount) {
-        // Check the discriminator value or class name
-        if (user.getClass().getSimpleName().equals("Operator")) {
-            throw new RuntimeException("User is not a Rider (Operators cannot earn flex dollars)");
+        // Guest users cannot earn flex dollars
+        if (user.getIsGuest() != null && user.getIsGuest()) {
+            return user;
         }
 
         Integer currentFlexDollars = user.getFlexDollars();
@@ -55,13 +55,12 @@ public class FlexDollarService {
             currentFlexDollars = 0;
         }
 
-        // Deduct what's available only
         int amountToDeduct = Math.min(amount, currentFlexDollars);
         user.setFlexDollars(currentFlexDollars - amountToDeduct);
         userRepository.save(user);
 
         if (amountToDeduct > 0) {
-            System.out.println("💰 Deducted " + amountToDeduct + " flex dollars from " + user.getEmail());
+            System.out.println("Deducted " + amountToDeduct + " flex dollars from " + user.getEmail());
         }
 
         return amountToDeduct;
@@ -69,6 +68,13 @@ public class FlexDollarService {
 
     @Transactional
     public AppliedFlexDollarsResult applyFlexDollarsToTrip(Long userId, double tripCostDollars) {
+        User user = userRepository.findById(userId).orElse(null);
+        
+        // Guest users cannot use flex dollars
+        if (user != null && user.getIsGuest() != null && user.getIsGuest()) {
+            return new AppliedFlexDollarsResult(0, tripCostDollars);
+        }
+        
         // Convert trip cost to cents (1 flex dollar = 1 cent)
         int tripCostCents = (int) Math.round(tripCostDollars * 100);
 
