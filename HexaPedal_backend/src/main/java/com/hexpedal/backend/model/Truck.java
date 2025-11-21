@@ -26,6 +26,7 @@ public class Truck {
             joinColumns = @JoinColumn(name = "truck_id"),
             inverseJoinColumns = @JoinColumn(name = "bike_id")
     )
+    @Builder.Default
     private List<Bike> bikes = new ArrayList<>();
 
     public boolean isFull() {
