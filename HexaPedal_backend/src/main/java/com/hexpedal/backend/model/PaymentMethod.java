@@ -27,7 +27,7 @@ public class PaymentMethod {
     private PaymentMethodType type;
 
     @Column(nullable = false, unique = true)
-    private String providerPaymentMethodId; // token from Stripe or other provider
+    private String providerPaymentMethodId;
 
     private String cardHolderName;
     @Enumerated(EnumType.STRING)

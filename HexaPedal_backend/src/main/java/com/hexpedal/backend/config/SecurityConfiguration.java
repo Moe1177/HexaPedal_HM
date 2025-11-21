@@ -41,19 +41,12 @@ public class SecurityConfiguration {
                     res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 }))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
                         .requestMatchers("/auth/**", "/api/map/**", "/ws/**", "/api/pricing/**", "/api/webhooks/**", "/api/routing/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/stations/**", "/api/bikes/**", "/api/docks/**").permitAll()
-                        
-                        // Guest endpoints
                         .requestMatchers(HttpMethod.POST, "/api/guest/initialize").permitAll()
                         .requestMatchers("/api/guest/trips/**", "/api/guest/convert", "/api/guest/account").authenticated()
-                        
-                        // Rider and operator trip/reservation endpoints
                         .requestMatchers("/api/reservations/**", "/api/trips/**").hasAnyRole("RIDER", "OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/docks/*/*/bike/*").hasAnyRole("RIDER", "OPERATOR")
-                        
-                        // Operator-only endpoints
                         .requestMatchers("/api/trucks/**").hasRole("OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")
                         .requestMatchers(HttpMethod.PUT, "/api/stations/**", "/api/bikes/**", "/api/docks/**").hasRole("OPERATOR")

@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String subjectEmail;
 
         try {
-            subjectEmail = jwtService.extractUsername(jwt); // this returns email so that it can match with the JWT
+            subjectEmail = jwtService.extractUsername(jwt); 
         } catch (JwtException | IllegalArgumentException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or expired token");
@@ -67,7 +67,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             } catch (RuntimeException e) {
-                // User not found (e.g., guest user was converted or deleted)
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("User not found or token is no longer valid");
                 return;

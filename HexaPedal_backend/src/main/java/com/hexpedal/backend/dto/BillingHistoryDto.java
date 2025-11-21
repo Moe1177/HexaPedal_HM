@@ -16,9 +16,6 @@ public record BillingHistoryDto(
         Integer flexDollarsUsed
 ) {
     public static BillingHistoryDto from(Rides ride) {
-        // The cost field already contains the final cost (after flex dollars) since ReservationService
-        // saves finalCostToCharge. We return it as-is for display purposes.
-        // flexDollarsUsed is included for transparency to show how much was deducted.
         return new BillingHistoryDto(
                 ride.getRide_id(),
                 ride.getStartTimestamp(),
@@ -27,7 +24,7 @@ public record BillingHistoryDto(
                 ride.getEndLocation(),
                 ride.getDistance(),
                 ride.getDuration(),
-                ride.getCost(), // This is already the final cost after flex dollars
+                ride.getCost(),
                 ride.getFlexDollarsUsed() != null ? ride.getFlexDollarsUsed() : 0
         );
     }

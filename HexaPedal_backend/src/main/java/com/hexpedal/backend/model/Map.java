@@ -8,7 +8,6 @@ import java.util.List;
 public class Map {
     @Getter
     @Setter
-    // Initialized after initialization of the map service, see ../service/MapService
     private List<MapEntity> mapEntities = new ArrayList<>();
     private static Map instance;
 

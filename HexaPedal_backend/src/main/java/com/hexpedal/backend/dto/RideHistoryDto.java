@@ -4,9 +4,6 @@ import com.hexpedal.backend.model.Rides;
 
 import java.time.Instant;
 
-/**
- * DTO for ride history to include bike information.
- */
 public record RideHistoryDto(
         Integer ride_id,
         Integer bikeId,

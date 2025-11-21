@@ -9,10 +9,10 @@ import lombok.Getter;
 @Getter
 public class RoutingConfig {
 
-    @Value("${ors.api.key:}")  // Empty string as default
+    @Value("${ors.api.key:}")  
     private String orsApiKey;
 
-    // Optional: Validate on startup
+   
     @PostConstruct
     public void validateConfig() {
         if (orsApiKey == null || orsApiKey.isEmpty()) {
