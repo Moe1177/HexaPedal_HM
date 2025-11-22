@@ -44,7 +44,9 @@ public class Dock {
     public DockingStation getStation() { 
         return station;
     }
-
+    public void setStation(DockingStation station) {
+        this.station = station;
+    }
  
     public boolean isEmpty() { 
         return this.bike == null;
