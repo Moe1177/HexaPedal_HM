@@ -117,19 +117,19 @@ CREATE TABLE reservation_history
 CREATE TABLE rider_loyalty
 (
     id                                        BIGSERIAL PRIMARY KEY,
-    created_at                                TIMESTAMP WITH TIME ZONE,
+    created_at                                TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     current_tier                              VARCHAR(255) NOT NULL,
-    last_evaluated_at                         TIMESTAMP WITH TIME ZONE,
-    last_tier_notification_shown              BOOLEAN,
-    missed_reservations_last_year             INTEGER,
-    previous_tier                             VARCHAR(255),
-    successful_claimed_reservations_last_year INTEGER,
+    last_evaluated_at                         TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_tier_notification_shown              BOOLEAN NOT NULL DEFAULT FALSE,
+    missed_reservations_last_year             INTEGER DEFAULT 0,
+    previous_tier                             VARCHAR(255) DEFAULT 'NONE',
+    successful_claimed_reservations_last_year INTEGER DEFAULT 0,
     tier_changed_at                           TIMESTAMP WITH TIME ZONE,
-    total_successful_returns                  INTEGER,
-    total_trips                               INTEGER,
-    trips_last_year                           INTEGER,
-    updated_at                                TIMESTAMP WITH TIME ZONE,
-    user_id                                   BIGINT       NOT NULL UNIQUE,
+    total_successful_returns                  INTEGER DEFAULT 0,
+    total_trips                               INTEGER DEFAULT 0,
+    trips_last_year                           INTEGER DEFAULT 0,
+    updated_at                                TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    user_id                                   BIGINT NOT NULL UNIQUE,
     CONSTRAINT rider_loyalty_current_tier_check CHECK ((current_tier = ANY (ARRAY['NONE', 'BRONZE', 'SILVER', 'GOLD']))),
     CONSTRAINT rider_loyalty_previous_tier_check CHECK ((previous_tier = ANY (ARRAY['NONE', 'BRONZE', 'SILVER', 'GOLD'])))
 );
@@ -296,11 +296,11 @@ VALUES (5001, 1001, 1, 'ACTIVE', NOW(), NOW() + INTERVAL '30 days', FALSE);
 -- RIDER LOYALTY
 -- ============================================================
 
-INSERT INTO public.rider_loyalty (id, user_id, current_tier, created_at, total_trips, total_successful_returns)
-VALUES (7001, 1001, 'BRONZE', NOW(), 10, 9),
-       (7002, 1002, 'NONE', NOW(), 0, 0);
-
-
+INSERT INTO public.rider_loyalty
+(id, user_id, current_tier, created_at, total_trips, total_successful_returns, last_tier_notification_shown)
+VALUES
+    (7001, 1001, 'BRONZE', NOW(), 10, 9, FALSE),
+    (7002, 1002, 'NONE', NOW(), 0, 0, FALSE);
 -- ============================================================
 -- TRUCKS
 -- ============================================================

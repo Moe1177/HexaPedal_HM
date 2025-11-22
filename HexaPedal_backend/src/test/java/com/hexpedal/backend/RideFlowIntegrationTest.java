@@ -8,6 +8,7 @@ import com.hexpedal.backend.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -69,37 +70,38 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void happyPath_RiderReservesRidesReturnsAndGetsBilled() {
-        String baseUrl = restTemplate.getRootUri();
+        // Authenticate as the rider WITH subscription
+        TestRestTemplate client = authenticated("testsub@example.com");
+
+        String baseUrl = client.getRootUri();
         System.out.println("Testing against base URL: " + baseUrl);
 
-        ResponseEntity<Void> reserveResponse = restTemplate.exchange(
-                "/api/reservations/bikes/" + AVAILABLE_BIKE_ID,
+        // 1. Reserve the bike
+        ResponseEntity<Void> reserveResponse = client.exchange(
+                "/api/reservations/bikes/{bikeId}",
                 HttpMethod.POST,
-                createEntity(),
-                Void.class
+                null,
+                Void.class,
+                AVAILABLE_BIKE_ID
         );
 
         System.out.println("POST /api/reservations/bikes/" + AVAILABLE_BIKE_ID + ": " + reserveResponse.getStatusCode());
+        System.out.println("Response: " + reserveResponse);
+        assertThat(reserveResponse.getStatusCode())
+                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
 
-        if (reserveResponse.getStatusCode() == HttpStatus.NOT_FOUND) {
-            System.out.println("❌ ENDPOINT NOT FOUND - Check:");
-            System.out.println("   - Is @RestController present?");
-            System.out.println("   - Is Spring Security blocking access?");
-            System.out.println("   - Is the controller package being scanned?");
-        }
-
-        assertThat(reserveResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
-
-        ResponseEntity<UserReservationStatusDTO> reservationStatus = restTemplate.exchange(
+        // 2. Check current reservation status
+        ResponseEntity<UserReservationStatusDTO> reservationStatus = client.exchange(
                 "/api/reservations/current",
                 HttpMethod.GET,
-                createEntity(),
+                createEntity(),         // <-- this automatically includes Content-Type + Auth header from interceptor
                 UserReservationStatusDTO.class
         );
 
         System.out.println("GET /api/reservations/current: " + reservationStatus.getStatusCode());
         assertThat(reservationStatus.getStatusCode()).isEqualTo(HttpStatus.OK);
 
+        // 3. Start trip
         Map<String, Object> destinationData = Map.of(
                 "stationName", "Station B",
                 "stationId", STATION_B_ID,
@@ -107,7 +109,7 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
                 "longitude", stationB.getLongitude()
         );
 
-        ResponseEntity<Void> startTripResponse = restTemplate.exchange(
+        ResponseEntity<Void> startTripResponse = client.exchange(
                 "/api/trips/" + AVAILABLE_BIKE_ID + "/start",
                 HttpMethod.POST,
                 createEntity(destinationData),
@@ -115,9 +117,11 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         );
 
         System.out.println("POST /api/trips/" + AVAILABLE_BIKE_ID + "/start: " + startTripResponse.getStatusCode());
-        assertThat(startTripResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+        assertThat(startTripResponse.getStatusCode())
+                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
 
-        ResponseEntity<UserActiveTripDTO> activeTrip = restTemplate.exchange(
+        // 4. Get current active trip
+        ResponseEntity<UserActiveTripDTO> activeTrip = client.exchange(
                 "/api/trips/current",
                 HttpMethod.GET,
                 createEntity(),
@@ -127,21 +131,28 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         System.out.println("GET /api/trips/current: " + activeTrip.getStatusCode());
         assertThat(activeTrip.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        ResponseEntity<Void> endTripResponse = restTemplate.exchange(
-                "/api/trips/return?bikeId=" + AVAILABLE_BIKE_ID +
-                        "&userId=" + RIDER_WITH_SUB_ID +
-                        "&stationId=" + STATION_B_ID,
+        // 5. End the trip
+        String endTripUrl = "/api/trips/return?bikeId=" + AVAILABLE_BIKE_ID +
+                "&userId=" + RIDER_WITH_SUB_ID +
+                "&stationId=" + STATION_B_ID;
+
+        ResponseEntity<Void> endTripResponse = client.exchange(
+                endTripUrl,
                 HttpMethod.POST,
                 createEntity(),
                 Void.class
         );
 
         System.out.println("POST /api/trips/return: " + endTripResponse.getStatusCode());
-        assertThat(endTripResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+        assertThat(endTripResponse.getStatusCode())
+                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
     }
 
     @Test
     void stationFull_ReturnAttemptTriggersOverflowCredit() {
+        // Authenticate as the rider
+        TestRestTemplate client = authenticated("testsub@example.com");
+
         // First, make Station B full by checking its capacity
         DockingStation stationB = stationRepository.findById(STATION_B_ID).orElseThrow();
         int stationBCapacity = stationB.getBikeCapacity();
@@ -159,25 +170,23 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         Bike savedBike = bikeRepository.save(bikeOnTrip);
 
         try {
-            // Try to return bike to station - THIS ENDPOINT EXISTS
-            ResponseEntity<Void> endTripResponse = restTemplate.exchange(
+            // Try to return bike to station
+            ResponseEntity<Void> endTripResponse = client.exchange(
                     "/api/trips/return?bikeId=" + savedBike.getId() +
                             "&userId=" + RIDER_WITH_SUB_ID +
                             "&stationId=" + STATION_B_ID,
                     HttpMethod.POST,
-                    createEntity(),
+                    null,
                     Void.class
             );
 
             System.out.println("Station full test - POST /api/trips/return: " + endTripResponse.getStatusCode());
-            // Should return conflict or bad request due to business logic
             assertThat(endTripResponse.getStatusCode()).isIn(HttpStatus.CONFLICT, HttpStatus.BAD_REQUEST, HttpStatus.NO_CONTENT);
 
             // Check if flex dollars changed (business logic dependent)
             User userAfter = userRepository.findById(RIDER_WITH_SUB_ID).orElseThrow();
             int finalFlexDollars = userAfter.getFlexDollars() != null ? userAfter.getFlexDollars() : 0;
 
-            // This depends on your business logic - just verify we can read the value
             assertThat(finalFlexDollars).isNotNull();
 
         } finally {
@@ -188,11 +197,14 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void reservationExpiry_ReservationHoldingTimeLapses() {
+        // Authenticate as the rider
+        TestRestTemplate client = authenticated("testsub@example.com");
+
         // First reserve a bike
-        ResponseEntity<Void> reserveResponse = restTemplate.exchange(
+        ResponseEntity<Void> reserveResponse = client.exchange(
                 "/api/reservations/bikes/" + ANOTHER_BIKE_ID,
                 HttpMethod.POST,
-                createEntity(),
+                null,
                 Void.class
         );
 
@@ -207,11 +219,11 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         bike.setReservationExpDate(java.time.LocalDate.now().minusDays(1));
         bikeRepository.save(bike);
 
-        // Trigger reservation expiry - THIS ENDPOINT EXISTS in ReservationController
-        ResponseEntity<Void> expireResponse = restTemplate.exchange(
+        // Trigger reservation expiry
+        ResponseEntity<Void> expireResponse = client.exchange(
                 "/api/reservations/expire",
                 HttpMethod.POST,
-                createEntity(),
+                null,
                 Void.class
         );
 
@@ -232,6 +244,9 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void rebalancing_StationEmptiedTriggersOperatorAlert() {
+        // Authenticate as an operator/admin user
+        TestRestTemplate client = authenticated("testsub@example.com");
+
         // Use the existing truck from init.sql instead of creating a new one
         Long existingTruckId = 2001L;
 
@@ -246,10 +261,10 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
         try {
             // Load bike onto the existing truck
-            ResponseEntity<Truck> loadResponse = restTemplate.exchange(
+            ResponseEntity<Truck> loadResponse = client.exchange(
                     "/api/trucks/" + existingTruckId + "/load/" + AVAILABLE_BIKE_ID,
                     HttpMethod.POST,
-                    createEntity(),
+                    null,
                     Truck.class
             );
 
@@ -258,8 +273,6 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
         } finally {
             // Clean up - remove the bike from the truck if it was loaded
-            // This depends on your business logic - you might need to add an unload endpoint
-            // or just reset the bike status via repository
             Bike bike = bikeRepository.findById(AVAILABLE_BIKE_ID).orElse(null);
             if (bike != null && bike.getBikeStatus() == BikeStatus.maintenance) {
                 bike.setBikeStatus(BikeStatus.available);
@@ -270,36 +283,39 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void completeRideFlow_WithSubscription_NoCharge() {
+        // Authenticate as the rider with subscription
+        TestRestTemplate client = authenticated("testsub@example.com");
+
         // Verify rider has active subscription via repository
         boolean hasActiveSubscription = userSubscriptionRepository.hasActiveSubscription(RIDER_WITH_SUB_ID);
         assertThat(hasActiveSubscription).isTrue();
 
         // Complete ride flow using endpoints that exist
         // Reserve bike
-        ResponseEntity<Void> reserveResponse = restTemplate.exchange(
+        ResponseEntity<Void> reserveResponse = client.exchange(
                 "/api/reservations/bikes/" + AVAILABLE_BIKE_ID,
                 HttpMethod.POST,
-                createEntity(),
+                null,
                 Void.class
         );
         System.out.println("Subscription test - POST /api/reservations/bikes/" + AVAILABLE_BIKE_ID + ": " + reserveResponse.getStatusCode());
 
         // Start trip
-        ResponseEntity<Void> startTripResponse = restTemplate.exchange(
+        ResponseEntity<Void> startTripResponse = client.exchange(
                 "/api/trips/" + AVAILABLE_BIKE_ID + "/start",
                 HttpMethod.POST,
-                createEntity(Map.of()),
+                new HttpEntity<>(Map.of()),
                 Void.class
         );
         System.out.println("POST /api/trips/" + AVAILABLE_BIKE_ID + "/start: " + startTripResponse.getStatusCode());
 
         // End trip
-        ResponseEntity<Void> endTripResponse = restTemplate.exchange(
+        ResponseEntity<Void> endTripResponse = client.exchange(
                 "/api/trips/return?bikeId=" + AVAILABLE_BIKE_ID +
                         "&userId=" + RIDER_WITH_SUB_ID +
                         "&stationId=" + STATION_A_ID,
                 HttpMethod.POST,
-                createEntity(),
+                null,
                 Void.class
         );
         System.out.println("POST /api/trips/return: " + endTripResponse.getStatusCode());

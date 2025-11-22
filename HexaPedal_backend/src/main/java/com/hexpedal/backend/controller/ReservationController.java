@@ -26,7 +26,6 @@ public class ReservationController {
     public ResponseEntity<Void> reserveBike(@PathVariable Integer bikeId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
-        
         reservationService.reserveBike(email, bikeId);
         return ResponseEntity.noContent().build();
     }
