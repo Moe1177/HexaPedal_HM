@@ -62,12 +62,10 @@ public class ReservationService {
 
         // Check if the station is out of service
         var station = dock.getStation();
-        System.out.println("Station: " + station);
         if (station != null && station.getStatus() == DockingStationStates.out_of_service) {
             throw new IllegalStateException("Cannot reserve bike from a station that is out of service.");
         }
 
-        System.out.println("Loyalty Service " + loyaltyService);
         int holdMinutes = loyaltyService.getReservationHoldMinutes(user.getId());
 
         bike.setBikeStatus(BikeStatus.reserved);

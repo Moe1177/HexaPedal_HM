@@ -85,16 +85,13 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
                 AVAILABLE_BIKE_ID
         );
 
-        System.out.println("POST /api/reservations/bikes/" + AVAILABLE_BIKE_ID + ": " + reserveResponse.getStatusCode());
-        System.out.println("Response: " + reserveResponse);
-        assertThat(reserveResponse.getStatusCode())
-                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+        assertThat(reserveResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT);
 
         // 2. Check current reservation status
         ResponseEntity<UserReservationStatusDTO> reservationStatus = client.exchange(
                 "/api/reservations/current",
                 HttpMethod.GET,
-                createEntity(),         // <-- this automatically includes Content-Type + Auth header from interceptor
+                null,
                 UserReservationStatusDTO.class
         );
 
@@ -117,14 +114,13 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         );
 
         System.out.println("POST /api/trips/" + AVAILABLE_BIKE_ID + "/start: " + startTripResponse.getStatusCode());
-        assertThat(startTripResponse.getStatusCode())
-                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+        assertThat(startTripResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT);
 
         // 4. Get current active trip
         ResponseEntity<UserActiveTripDTO> activeTrip = client.exchange(
                 "/api/trips/current",
                 HttpMethod.GET,
-                createEntity(),
+                null,
                 UserActiveTripDTO.class
         );
 
@@ -135,17 +131,17 @@ public class RideFlowIntegrationTest extends BaseIntegrationTest {
         String endTripUrl = "/api/trips/return?bikeId=" + AVAILABLE_BIKE_ID +
                 "&userId=" + RIDER_WITH_SUB_ID +
                 "&stationId=" + STATION_B_ID;
+        System.out.println("End trip url: " + endTripUrl);
 
         ResponseEntity<Void> endTripResponse = client.exchange(
                 endTripUrl,
                 HttpMethod.POST,
-                createEntity(),
+                null,
                 Void.class
         );
 
         System.out.println("POST /api/trips/return: " + endTripResponse.getStatusCode());
-        assertThat(endTripResponse.getStatusCode())
-                .isIn(HttpStatus.NO_CONTENT, HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+        assertThat(endTripResponse.getStatusCode()).isIn(HttpStatus.NO_CONTENT);
     }
 
     @Test
