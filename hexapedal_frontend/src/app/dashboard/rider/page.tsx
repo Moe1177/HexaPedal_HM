@@ -61,13 +61,13 @@ export default function RiderDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showReserveModal, setShowReserveModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
-  
+
   // Loyalty state
   const [loyaltyStatus, setLoyaltyStatus] = useState<LoyaltyStatus | null>(null);
   const [isLoadingLoyalty, setIsLoadingLoyalty] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showTierNotification, setShowTierNotification] = useState(false);
-  
+
   // Reservation timer state
   const [reservationTimeRemaining, setReservationTimeRemaining] = useState<number | null>(null);
 
@@ -86,17 +86,17 @@ export default function RiderDashboard() {
     }
   }, [token]);
 
-  // Fetch loyalty status on mount
+
   useEffect(() => {
     const fetchLoyaltyStatus = async () => {
       if (!token) return;
-      
+
       setIsLoadingLoyalty(true);
       try {
         const status = await getLoyaltyStatus(token);
         setLoyaltyStatus(status);
-        
-        // Show notification if there's a tier change
+
+
         if (status.hasNotification) {
           setShowTierNotification(true);
         }
@@ -110,67 +110,78 @@ export default function RiderDashboard() {
     fetchLoyaltyStatus();
   }, [token]);
 
-  // Fetch current reservation on mount
+
   useEffect(() => {
     const fetchCurrentReservation = async () => {
       if (!token) return;
-      
+
       try {
         const reservationStatus = await getCurrentReservation(token);
-        if (reservationStatus.hasReservation && reservationStatus.bikeId) {
-          const expiresAt = reservationStatus.expiresAt ? new Date(reservationStatus.expiresAt) : null;
-          
-          // Calculate reservedAt by subtracting hold minutes from expiresAt
-          let reservedAt = new Date();
-          if (expiresAt && loyaltyStatus) {
-            const holdMinutes = loyaltyStatus.reservationHoldMinutes || 10;
-            reservedAt = new Date(expiresAt.getTime() - (holdMinutes * 60 * 1000));
-          }
-          
-          setActiveReservation({
-            bikeId: reservationStatus.bikeId,
-            reservedAt,
-            expiresAt: expiresAt || undefined
-          });
+
+        if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
         }
+
+        const expiresAt = reservationStatus.expiresAt ? new Date(reservationStatus.expiresAt) : null;
+
+        if (expiresAt && expiresAt.getTime() <= Date.now()) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
+        }
+        let reservedAt = new Date();
+        if (expiresAt && loyaltyStatus) {
+          const holdMinutes = loyaltyStatus.reservationHoldMinutes || 10;
+          reservedAt = new Date(expiresAt.getTime() - (holdMinutes * 60 * 1000));
+        }
+
+        setActiveReservation({
+          bikeId: reservationStatus.bikeId,
+          reservedAt,
+          expiresAt: expiresAt || undefined
+        });
       } catch (err) {
         console.error("Failed to fetch current reservation:", err);
+        setActiveReservation(null);
+        setReservationTimeRemaining(null);
       }
     };
 
     fetchCurrentReservation();
   }, [token, loyaltyStatus]);
 
-  // Fetch current active trip on mount
+
   useEffect(() => {
     const fetchCurrentTrip = async () => {
       if (!token) return;
-      
+
       try {
         const tripStatus = await getCurrentTrip(token);
         if (tripStatus.hasActiveTrip && tripStatus.bikeId && tripStatus.userId) {
           setActiveTrip({
             bikeId: tripStatus.bikeId,
             userId: tripStatus.userId,
-            startedAt: tripStatus.startedAt 
-              ? new Date(tripStatus.startedAt) 
+            startedAt: tripStatus.startedAt
+              ? new Date(tripStatus.startedAt)
               : new Date(),
             startStationName: tripStatus.startStationName || undefined
           });
-          
+
           // Restore destination and route if available
-          if (tripStatus.destinationStationId && 
-              tripStatus.destinationStationName && 
-              tripStatus.destinationLatitude && 
-              tripStatus.destinationLongitude) {
-            
+          if (tripStatus.destinationStationId &&
+            tripStatus.destinationStationName &&
+            tripStatus.destinationLatitude &&
+            tripStatus.destinationLongitude) {
+
             setDestinationInfo({
               stationId: tripStatus.destinationStationId,
               stationName: tripStatus.destinationStationName,
               latitude: tripStatus.destinationLatitude,
               longitude: tripStatus.destinationLongitude
             });
-            
+
             // Get start station coordinates and fetch route
             const startStationCoords = await getStartStationCoordinatesFromName(tripStatus.startStationName);
             if (startStationCoords) {
@@ -212,7 +223,7 @@ export default function RiderDashboard() {
 
     const calculateTimeRemaining = () => {
       let expiryTime: number;
-      
+
       // Use expiresAt from backend if available (persistent across sessions)
       if (activeReservation.expiresAt) {
         expiryTime = activeReservation.expiresAt.getTime();
@@ -221,7 +232,7 @@ export default function RiderDashboard() {
         const reservationHoldMinutes = loyaltyStatus.reservationHoldMinutes || 10;
         expiryTime = new Date(activeReservation.reservedAt).getTime() + (reservationHoldMinutes * 60 * 1000);
       }
-      
+
       const now = Date.now();
       const remainingMs = expiryTime - now;
       const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
@@ -252,29 +263,72 @@ export default function RiderDashboard() {
     return () => clearInterval(intervalId);
   }, [activeReservation, loyaltyStatus]);
 
+  // Periodic check to verify reservation status with backend (catches operator cancellations)
+  useEffect(() => {
+    if (!token || !activeReservation) return;
+
+    // Check reservation status every 5 seconds to catch operator cancellations
+    const checkInterval = setInterval(async () => {
+      try {
+        const reservationStatus = await getCurrentReservation(token);
+
+        // If backend says no reservation, clear the frontend state
+        if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
+        }
+
+        // Validate expiry time from backend
+        if (reservationStatus.expiresAt) {
+          const expiresAt = new Date(reservationStatus.expiresAt);
+          if (expiresAt.getTime() <= Date.now()) {
+            // Reservation expired, clear it
+            setActiveReservation(null);
+            setReservationTimeRemaining(null);
+            return;
+          }
+
+          // Update expiresAt if it changed (shouldn't happen, but be safe)
+          if (activeReservation.expiresAt?.getTime() !== expiresAt.getTime()) {
+            setActiveReservation(prev => prev ? {
+              ...prev,
+              expiresAt: expiresAt
+            } : null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify reservation status:", err);
+        // Don't clear on error - might be temporary network issue
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [token, activeReservation]);
+
   const handleReservationExpiration = async () => {
     if (!activeReservation || !email || !token) return;
 
     console.log("Reservation expired, marking as EXPIRED and re-evaluating tier...");
-    
+
     try {
       // Mark all expired reservations as EXPIRED (not CANCELLED)
       // This ensures they count as missed reservations in loyalty calculation
       await expireReservations(token);
-      
+
       // Re-evaluate tier after missed reservation
       const updatedStatus = await evaluateTier(token);
       setLoyaltyStatus(updatedStatus);
-      
+
       // Show tier notification if there was a change
       if (updatedStatus.hasNotification) {
         setShowTierNotification(true);
       }
-      
+
       // Clear the reservation
       setActiveReservation(null);
       setReservationTimeRemaining(null);
-      
+
       alert("Your reservation has expired. Please reserve a new bike if needed.");
     } catch (err) {
       console.error("Failed to handle reservation expiration:", err);
@@ -294,11 +348,11 @@ export default function RiderDashboard() {
       await reserveBike(bikeId, email, token);
       setActiveReservation({ bikeId, reservedAt: new Date(), expiresAt: undefined });
       setShowReserveModal(false);
-      
+
       // Fetch updated loyalty status to get current tier's hold time
       const updatedStatus = await getLoyaltyStatus(token);
       setLoyaltyStatus(updatedStatus);
-      
+
       alert(`Bike reserved successfully! You have ${updatedStatus.reservationHoldMinutes} minutes to unlock it.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reserve bike");
@@ -349,10 +403,10 @@ export default function RiderDashboard() {
     try {
       // Store destination info
       setDestinationInfo({ stationId, stationName, latitude, longitude });
-      
+
       // Get start station coordinates BEFORE unlocking
       const startStationCoords = await getStartStationCoordinates(activeReservation.bikeId);
-      
+
       // Unlock the bike with destination data
       await unlockBike(activeReservation.bikeId, token, {
         stationId,
@@ -360,13 +414,13 @@ export default function RiderDashboard() {
         latitude,
         longitude
       });
-      
+
       // Get the user ID from the bike after unlocking
       const userIdFromBike = await getUserIdFromBike(activeReservation.bikeId, token);
       if (!userIdFromBike) {
         throw new Error("Unable to get user ID from bike. Please try again.");
       }
-      
+
       if (startStationCoords) {
         // Fetch route
         try {
@@ -391,11 +445,11 @@ export default function RiderDashboard() {
         console.warn("Could not determine start station coordinates, skipping route");
         setError("Warning: Could not determine start station coordinates. Route visualization will not be available.");
       }
-      
-      setActiveTrip({ 
-        bikeId: activeReservation.bikeId, 
-        userId: userIdFromBike, 
-        startedAt: new Date() 
+
+      setActiveTrip({
+        bikeId: activeReservation.bikeId,
+        userId: userIdFromBike,
+        startedAt: new Date()
       });
       setActiveReservation(null);
       setShowDestinationModal(false);
@@ -418,17 +472,17 @@ export default function RiderDashboard() {
     setError(null);
     try {
       await unlockBike(activeReservation.bikeId, token);
-      
+
       // Get the user ID from the bike after unlocking
       const userIdFromBike = await getUserIdFromBike(activeReservation.bikeId, token);
       if (!userIdFromBike) {
         throw new Error("Unable to get user ID from bike. Please try again.");
       }
-      
-      setActiveTrip({ 
-        bikeId: activeReservation.bikeId, 
-        userId: userIdFromBike, 
-        startedAt: new Date() 
+
+      setActiveTrip({
+        bikeId: activeReservation.bikeId,
+        userId: userIdFromBike,
+        startedAt: new Date()
       });
       setActiveReservation(null);
       setShowDestinationModal(false);
@@ -448,9 +502,9 @@ export default function RiderDashboard() {
         console.error("Failed to fetch stations");
         return null;
       }
-      
+
       const stations = await response.json();
-      
+
       // Check each station to find which one has this bike
       for (const station of stations) {
         try {
@@ -460,9 +514,9 @@ export default function RiderDashboard() {
             const foundBike = bikes.find((b: any) => b.id === bikeId);
             if (foundBike) {
               console.log(`Found bike ${bikeId} at station ${station.name}`);
-              return { 
-                latitude: station.latitude, 
-                longitude: station.longitude 
+              return {
+                latitude: station.latitude,
+                longitude: station.longitude
               };
             }
           }
@@ -471,7 +525,7 @@ export default function RiderDashboard() {
           continue;
         }
       }
-      
+
       console.warn(`Could not find bike ${bikeId} at any station`);
       return null;
     } catch (err) {
@@ -482,14 +536,14 @@ export default function RiderDashboard() {
 
   const getStartStationCoordinatesFromName = async (stationName: string | null): Promise<{ latitude: number; longitude: number } | null> => {
     if (!stationName) return null;
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/stations`);
       if (!response.ok) return null;
-      
+
       const stations = await response.json();
       const station = stations.find((s: any) => s.name === stationName);
-      
+
       if (station) {
         return {
           latitude: station.latitude,
@@ -516,25 +570,25 @@ export default function RiderDashboard() {
       setActiveTrip(null);
       setShowReturnModal(false);
       setSelectedStationId(null);
-      
+
       // Clear navigation state
       setDestinationInfo(null);
       setRouteCoordinates(null);
       setRouteInfo(null);
-      
+
       // Fetch updated loyalty status after completing the trip
       if (token) {
         try {
           const updatedStatus = await getLoyaltyStatus(token);
           setLoyaltyStatus(updatedStatus);
-          
+
           // Show progress notification after every ride
           setShowTierNotification(true);
         } catch (err) {
           console.error("Failed to fetch updated loyalty status:", err);
         }
       }
-      
+
       alert("Bike returned successfully!");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to return bike");
@@ -555,11 +609,11 @@ export default function RiderDashboard() {
 
   const handleRefreshTier = async () => {
     if (!token) return;
-    
+
     try {
       const status = await evaluateTier(token);
       setLoyaltyStatus(status);
-      
+
       // Show notification if there's a tier change
       if (status.hasNotification) {
         setShowTierNotification(true);
@@ -571,11 +625,11 @@ export default function RiderDashboard() {
 
   const handleDismissNotification = async () => {
     if (!token) return;
-    
+
     setShowTierNotification(false);
     try {
       await dismissNotification(token);
-      
+
       // Update local state to mark notification as shown
       if (loyaltyStatus) {
         setLoyaltyStatus({
@@ -598,7 +652,7 @@ export default function RiderDashboard() {
   // Helper function to get color classes based on time remaining
   const getTimerColorClasses = (seconds: number): { bg: string; border: string; text: string } => {
     const minutes = seconds / 60;
-    
+
     if (minutes > 5) {
       // Green - more than 5 minutes
       return {
@@ -650,11 +704,10 @@ export default function RiderDashboard() {
           <nav className="space-y-2">
             <button
               onClick={() => setCurrentView("map")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                currentView === "map"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "map"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -663,11 +716,10 @@ export default function RiderDashboard() {
             </button>
             <button
               onClick={() => setCurrentView("rides")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                currentView === "rides"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "rides"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -676,11 +728,10 @@ export default function RiderDashboard() {
             </button>
             <button
               onClick={() => setCurrentView("billing")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                currentView === "billing"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "billing"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -689,11 +740,10 @@ export default function RiderDashboard() {
             </button>
             <button
               onClick={() => setCurrentView("profile")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                currentView === "profile"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "profile"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -716,7 +766,7 @@ export default function RiderDashboard() {
               <p className="text-xs text-neutral-500 dark:text-neutral-500 mb-3">
                 Started: {activeTrip.startedAt.toLocaleTimeString()}
               </p>
-              
+
               {destinationInfo && (
                 <div className="mb-3 p-3 bg-white/50 dark:bg-neutral-800/50 rounded-lg border border-emerald-200 dark:border-emerald-800">
                   <div className="flex items-start gap-2 mb-2">
@@ -753,7 +803,7 @@ export default function RiderDashboard() {
                   )}
                 </div>
               )}
-              
+
               <button
                 onClick={() => setShowReturnModal(true)}
                 className="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium"
@@ -770,7 +820,7 @@ export default function RiderDashboard() {
               <p className="text-xs text-neutral-500 dark:text-neutral-500 mb-2">
                 Reserved: {activeReservation.reservedAt.toLocaleTimeString()}
               </p>
-              
+
               {/* Countdown Timer */}
               <div className={`mb-3 p-3 rounded-lg bg-white/50 dark:bg-neutral-800/50 border ${getTimerColorClasses(reservationTimeRemaining).border}`}>
                 <div className="flex items-center justify-between">
@@ -787,7 +837,7 @@ export default function RiderDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <button
                   onClick={() => handleUnlockBike(activeReservation.bikeId)}
@@ -818,7 +868,7 @@ export default function RiderDashboard() {
           {currentView === "map" && (
             <div className="absolute inset-0 bg-gradient-to-br from-sky-100 to-indigo-100 dark:from-neutral-900 dark:to-neutral-950">
               <MapEntitiesProvider>
-                <MapView 
+                <MapView
                   onBikeReserved={handleBikeReservedFromModal}
                   routeCoordinates={routeCoordinates || undefined}
                 />
