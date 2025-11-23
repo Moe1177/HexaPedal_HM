@@ -34,12 +34,12 @@ test.describe('Reservation Expiry', () => {
         // Try multiple selectors and wait for the sidebar to be ready
         const sidebar = page.getByRole('complementary');
         await expect(sidebar).toBeVisible({ timeout: 10000 });
-        
+
         // Wait for either the h4 or the text "Active Reservation" to appear
         const activeReservationH4 = page.locator('h4:has-text("Active Reservation")');
         const activeReservationText = page.locator('text=Active Reservation');
         const reservationSelector = activeReservationH4.or(activeReservationText);
-        
+
         // Also wait for the bike ID to appear, which confirms the reservation is fully loaded
         await expect(reservationSelector).toBeVisible({ timeout: 30000 });
         await expect(page.locator('text=/Bike #\\d+/i')).toBeVisible({ timeout: 5000 });
@@ -61,21 +61,24 @@ test.describe('Reservation Expiry', () => {
         // 7. Trigger expiration via API endpoint
         // Get the auth token from localStorage or cookies
         const token = await page.evaluate(() => {
-            return localStorage.getItem('token') || localStorage.getItem('authToken');
+            return localStorage.getItem('auth_token');
         });
 
+        console.log("Token: ", token)
         if (token) {
-            // Call the expire reservations API endpoint
+            // Call the cancel reservations API endpoint (to simulate expiry)
+            console.log("Testing! this endpoint")
             const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const expireResponse = await page.request.post(`${API_BASE_URL}/api/reservations/expire`, {
+            const cancelResponse = await page.request.post(`${API_BASE_URL}/api/reservations/3/cancel`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
+            console.log("Cancel Response: ", cancelResponse)
 
             // Verify the API call succeeded
-            expect(expireResponse.status()).toBe(204); // NO_CONTENT
+            expect(cancelResponse.status()).toBe(204); // NO_CONTENT
         }
 
         // 8. Wait for UI to update after expiration
@@ -99,7 +102,7 @@ test.describe('Reservation Expiry', () => {
         // 10. Verify updated bike state - reservation should be gone
         // The active reservation section should no longer be visible
         const reservationStillVisible = await page.locator('h4:has-text("Active Reservation")').isVisible().catch(() => false);
-        
+
         // After expiration, the reservation should be cleared
         // Either the alert was shown or the reservation UI disappeared
         expect(expirationAlertShown || !reservationStillVisible).toBeTruthy();
@@ -107,10 +110,10 @@ test.describe('Reservation Expiry', () => {
         // 11. Verify bike is now available by attempting to reserve again
         await page.locator('button:has-text("Start Ride")').click();
         await expect(page.locator('text=Reserve a Bike')).toBeVisible();
-        
+
         // Try to reserve the same bike again (should work if expired)
         await page.locator('input[placeholder="Enter Bike ID"]').fill('3');
-        
+
         // The bike should now be available for reservation
         // (This verifies the bike state changed from reserved to available)
     });

@@ -96,7 +96,7 @@ export default function RiderDashboard() {
         const status = await getLoyaltyStatus(token);
         setLoyaltyStatus(status);
 
-       
+
         if (status.hasNotification) {
           setShowTierNotification(true);
         }
@@ -117,7 +117,7 @@ export default function RiderDashboard() {
 
       try {
         const reservationStatus = await getCurrentReservation(token);
-        
+
         if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
           setActiveReservation(null);
           setReservationTimeRemaining(null);
@@ -125,7 +125,7 @@ export default function RiderDashboard() {
         }
 
         const expiresAt = reservationStatus.expiresAt ? new Date(reservationStatus.expiresAt) : null;
-        
+
         if (expiresAt && expiresAt.getTime() <= Date.now()) {
           setActiveReservation(null);
           setReservationTimeRemaining(null);
@@ -152,7 +152,7 @@ export default function RiderDashboard() {
     fetchCurrentReservation();
   }, [token, loyaltyStatus]);
 
-  
+
   useEffect(() => {
     const fetchCurrentTrip = async () => {
       if (!token) return;
@@ -271,7 +271,7 @@ export default function RiderDashboard() {
     const checkInterval = setInterval(async () => {
       try {
         const reservationStatus = await getCurrentReservation(token);
-        
+
         // If backend says no reservation, clear the frontend state
         if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
           setActiveReservation(null);
@@ -705,8 +705,8 @@ export default function RiderDashboard() {
             <button
               onClick={() => setCurrentView("map")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "map"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -717,8 +717,8 @@ export default function RiderDashboard() {
             <button
               onClick={() => setCurrentView("rides")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "rides"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -729,8 +729,8 @@ export default function RiderDashboard() {
             <button
               onClick={() => setCurrentView("billing")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "billing"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -741,8 +741,8 @@ export default function RiderDashboard() {
             <button
               onClick={() => setCurrentView("profile")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${currentView === "profile"
-                  ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                  : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
