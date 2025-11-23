@@ -31,6 +31,7 @@ export default function ReturnBikeModal({
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [loadingStations, setLoadingStations] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadStations = async () => {
     setLoadingStations(true);
@@ -44,11 +45,7 @@ export default function ReturnBikeModal({
 
       if (response.ok) {
         const allStations = await response.json();
-        // Filter stations that have available docks
-        const stationsWithSpace = allStations.filter(
-          (station: any) => station.numberOfBikesDocked < station.bikeCapacity
-        );
-        setStations(stationsWithSpace);
+        setStations(allStations);
       }
     } catch (error) {
       console.error("Failed to load stations:", error);
@@ -64,7 +61,13 @@ export default function ReturnBikeModal({
   }, [isOpen]);
 
   const handleReturn = () => {
+    setError(null);
     if (selectedStationId) {
+      const selectedStation = stations.find(s => s.id === selectedStationId);
+      if (selectedStation && selectedStation.numberOfBikesDocked >= selectedStation.bikeCapacity) {
+        setError("Invalid operation, station is full");
+        return;
+      }
       onReturn(selectedStationId);
     }
   };
@@ -95,6 +98,12 @@ export default function ReturnBikeModal({
             Select a station with available docks to return your bike:
           </p>
 
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           {loadingStations ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -107,17 +116,25 @@ export default function ReturnBikeModal({
             <div className="space-y-3">
               {stations.map((station) => {
                 const availableDocks = station.bikeCapacity - station.numberOfBikesDocked;
+                const isFull = station.numberOfBikesDocked >= station.bikeCapacity;
                 const isSelected = selectedStationId === station.id;
-                
+                const isDisabled = isFull;
+
                 return (
                   <div
                     key={station.id}
-                    onClick={() => setSelectedStationId(station.id)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20"
-                        : "border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-700"
-                    }`}
+                    onClick={() => {
+                      if (!isDisabled) {
+                        setError(null);
+                        setSelectedStationId(station.id);
+                      }
+                    }}
+                    className={`p-4 rounded-lg border-2 transition-all ${isDisabled
+                      ? "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/20 cursor-not-allowed opacity-60"
+                      : isSelected
+                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 cursor-pointer"
+                        : "border-neutral-200 dark:border-neutral-700 hover:border-indigo-300 dark:hover:border-indigo-700 cursor-pointer"
+                      }`}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -127,16 +144,22 @@ export default function ReturnBikeModal({
                         <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                           {station.address}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
-                          <span>
-                            {availableDocks} dock{availableDocks !== 1 ? "s" : ""} available
-                          </span>
-                          <span>
-                            {station.numberOfBikesDocked}/{station.bikeCapacity} occupied
-                          </span>
-                        </div>
+                        {isFull ? (
+                          <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                            Station is full, overflow error
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
+                            <span>
+                              {availableDocks} dock{availableDocks !== 1 ? "s" : ""} available
+                            </span>
+                            <span>
+                              {station.numberOfBikesDocked}/{station.bikeCapacity} occupied
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      {isSelected && (
+                      {isSelected && !isDisabled && (
                         <div className="ml-4 flex-shrink-0">
                           <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center">
                             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
