@@ -95,7 +95,7 @@ public class GuestTripController {
                 return ResponseEntity.badRequest().body("User is not a guest user");
             }
 
-            guestSessionService.deleteGuestUser(user.getId());
+            guestSessionService.archiveGuestUser(user.getId());
             return ResponseEntity.ok("Guest account deleted successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to delete account: " + e.getMessage());
