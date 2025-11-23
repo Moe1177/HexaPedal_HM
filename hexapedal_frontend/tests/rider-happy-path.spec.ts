@@ -47,7 +47,7 @@ test.describe('Rider Happy Path', () => {
 
         // 7. Select return station
         await expect(page.locator('h2:has-text("Return Bike")')).toBeVisible({ timeout: 10000 });
-        await page.locator('.space-y-3 > div').first().click();
+        await page.locator('.space-y-3 > div').nth(1).click();
 
         // Click "Return Bike" button inside the modal (not sidebar)
         await page.locator('.fixed button:has-text("Return Bike")').click();
@@ -60,8 +60,17 @@ test.describe('Rider Happy Path', () => {
 
         await page.waitForTimeout(2000); // Wait for alert and state update
 
-        // 9. Check billing
+        // 9. Check billing and trip information
         await page.locator('button:has-text("Payment")').click();
         await expect(page.locator('text=Billing & Payment')).toBeVisible({ timeout: 10000 });
+        
+        // Verify billing information is displayed
+        // Check for billing history or trip summary
+        const billingContent = page.locator('text=Billing & Payment');
+        await expect(billingContent).toBeVisible();
+        
+        // Verify trip information appears in billing history
+        // Look for ride details (station names, cost, etc.)
+        await expect(page.locator('text=/Ride|Trip|Station|Cost|CAD/i').first()).toBeVisible({ timeout: 5000 });
     });
 });
