@@ -86,7 +86,7 @@ export default function RiderDashboard() {
     }
   }, [token]);
 
-  // Fetch loyalty status on mount
+
   useEffect(() => {
     const fetchLoyaltyStatus = async () => {
       if (!token) return;
@@ -96,7 +96,7 @@ export default function RiderDashboard() {
         const status = await getLoyaltyStatus(token);
         setLoyaltyStatus(status);
 
-        // Show notification if there's a tier change
+       
         if (status.hasNotification) {
           setShowTierNotification(true);
         }
@@ -110,38 +110,49 @@ export default function RiderDashboard() {
     fetchLoyaltyStatus();
   }, [token]);
 
-  // Fetch current reservation on mount
+
   useEffect(() => {
     const fetchCurrentReservation = async () => {
       if (!token) return;
 
       try {
         const reservationStatus = await getCurrentReservation(token);
-        if (reservationStatus.hasReservation && reservationStatus.bikeId) {
-          const expiresAt = reservationStatus.expiresAt ? new Date(reservationStatus.expiresAt) : null;
-
-          // Calculate reservedAt by subtracting hold minutes from expiresAt
-          let reservedAt = new Date();
-          if (expiresAt && loyaltyStatus) {
-            const holdMinutes = loyaltyStatus.reservationHoldMinutes || 10;
-            reservedAt = new Date(expiresAt.getTime() - (holdMinutes * 60 * 1000));
-          }
-
-          setActiveReservation({
-            bikeId: reservationStatus.bikeId,
-            reservedAt,
-            expiresAt: expiresAt || undefined
-          });
+        
+        if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
         }
+
+        const expiresAt = reservationStatus.expiresAt ? new Date(reservationStatus.expiresAt) : null;
+        
+        if (expiresAt && expiresAt.getTime() <= Date.now()) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
+        }
+        let reservedAt = new Date();
+        if (expiresAt && loyaltyStatus) {
+          const holdMinutes = loyaltyStatus.reservationHoldMinutes || 10;
+          reservedAt = new Date(expiresAt.getTime() - (holdMinutes * 60 * 1000));
+        }
+
+        setActiveReservation({
+          bikeId: reservationStatus.bikeId,
+          reservedAt,
+          expiresAt: expiresAt || undefined
+        });
       } catch (err) {
         console.error("Failed to fetch current reservation:", err);
+        setActiveReservation(null);
+        setReservationTimeRemaining(null);
       }
     };
 
     fetchCurrentReservation();
   }, [token, loyaltyStatus]);
 
-  // Fetch current active trip on mount
+  
   useEffect(() => {
     const fetchCurrentTrip = async () => {
       if (!token) return;
@@ -251,6 +262,49 @@ export default function RiderDashboard() {
 
     return () => clearInterval(intervalId);
   }, [activeReservation, loyaltyStatus]);
+
+  // Periodic check to verify reservation status with backend (catches operator cancellations)
+  useEffect(() => {
+    if (!token || !activeReservation) return;
+
+    // Check reservation status every 5 seconds to catch operator cancellations
+    const checkInterval = setInterval(async () => {
+      try {
+        const reservationStatus = await getCurrentReservation(token);
+        
+        // If backend says no reservation, clear the frontend state
+        if (!reservationStatus.hasReservation || !reservationStatus.bikeId) {
+          setActiveReservation(null);
+          setReservationTimeRemaining(null);
+          return;
+        }
+
+        // Validate expiry time from backend
+        if (reservationStatus.expiresAt) {
+          const expiresAt = new Date(reservationStatus.expiresAt);
+          if (expiresAt.getTime() <= Date.now()) {
+            // Reservation expired, clear it
+            setActiveReservation(null);
+            setReservationTimeRemaining(null);
+            return;
+          }
+
+          // Update expiresAt if it changed (shouldn't happen, but be safe)
+          if (activeReservation.expiresAt?.getTime() !== expiresAt.getTime()) {
+            setActiveReservation(prev => prev ? {
+              ...prev,
+              expiresAt: expiresAt
+            } : null);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify reservation status:", err);
+        // Don't clear on error - might be temporary network issue
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(checkInterval);
+  }, [token, activeReservation]);
 
   const handleReservationExpiration = async () => {
     if (!activeReservation || !email || !token) return;
