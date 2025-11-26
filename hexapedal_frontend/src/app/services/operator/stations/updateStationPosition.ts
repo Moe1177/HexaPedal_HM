@@ -4,9 +4,7 @@ import {
   DockingStation,
 } from "@/types/DockingStation";
 
-/**
- * Updates a docking station's position (latitude and longitude)
- */
+// Updates a docking station's position
 export async function updateStationPosition(
   stationId: number,
   request: UpdateStationPositionRequest,

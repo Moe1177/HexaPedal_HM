@@ -18,7 +18,6 @@ export default function OperatorAccountView() {
       const userEmail = getEmailFromToken(token);
       const id = getUserIdFromToken(token);
       setEmail(userEmail);
-      // Only set userId if it's a valid number (not NaN)
       if (id !== null && !isNaN(id) && typeof id === 'number') {
         setUserId(id);
       } else {

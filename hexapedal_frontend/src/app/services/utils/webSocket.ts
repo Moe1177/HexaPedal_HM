@@ -4,10 +4,6 @@ import { API_BASE_URL } from "./constants";
 
 let stompClient: Client | null = null;
 
-/**
- * Connects to the WebSocket endpoint and subscribes to a topic.
- * @param onMessage callback for handling incoming messages
- */
 export function connectToWebSocket(onMessage: (msg: any) => void) {
     console.log("[WebSocket] 🌐 Connecting to:", API_BASE_URL + "/ws");
     
@@ -33,9 +29,6 @@ export function connectToWebSocket(onMessage: (msg: any) => void) {
     stompClient.activate();
 }
 
-/**
- * Disconnects the WebSocket connection.
- */
 export function disconnectWebSocket() {
     if (stompClient) {
         stompClient.deactivate();
@@ -44,9 +37,6 @@ export function disconnectWebSocket() {
     }
 }
 
-/**
- * (Optional) Send message to backend
- */
 export function sendWebSocketMessage(destination: string, body: any) {
     if (stompClient && stompClient.connected) {
         stompClient.publish({ destination, body: JSON.stringify(body) });

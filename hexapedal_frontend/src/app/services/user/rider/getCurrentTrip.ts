@@ -25,7 +25,7 @@ export async function getCurrentTrip(token: string): Promise<ActiveTripStatus> {
     }
   );
 
-  // If no trip exists, return a default "no trip" response
+  // If no trip exists, return a "no trip" response
   if (response.status === 404 || response.status === 204) {
     return {
       hasActiveTrip: false,

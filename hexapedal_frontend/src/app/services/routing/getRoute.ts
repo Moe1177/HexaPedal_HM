@@ -1,7 +1,4 @@
-/**
- * Routing service to fetch navigation routes from OpenStreetMap Routing Service (OSRS)
- */
-
+// Routing service to fetch navigation routes from OpenStreetMap Routing Service (OSRS)
 import { API_BASE_URL } from "../utils/constants";
 
 export interface RouteCoordinate {
@@ -83,11 +80,10 @@ export async function getRoute(
   } catch (error) {
     console.error("Failed to fetch route from backend:", error);
     
-    // Fallback to straight line
+    // Fallback to straight line route
     console.warn("Using fallback straight-line route");
     const distance = calculateDistance(startLat, startLng, endLat, endLng);
     
-    // Create a simple multi-point route for better visualization
     const numPoints = 10;
     const coordinates: RouteCoordinate[] = [];
     
@@ -110,18 +106,17 @@ export async function getRoute(
   }
 }
 
-/**
- * Validate if coordinates are valid (not null, not 0,0, and within valid ranges)
- */
+// Validate if coordinates are valid
 function isValidCoordinate(lat: number, lng: number): boolean {
   if (lat === null || lng === null || lat === undefined || lng === undefined) {
     return false;
   }
   if (lat === 0 && lng === 0) {
-    return false; // (0,0) is in the ocean and likely invalid
+    return false;
   }
+  // Out of valid coordinate ranges
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-    return false; // Out of valid coordinate ranges
+    return false; 
   }
   return true;
 }
@@ -150,9 +145,7 @@ function calculateDistance(
   return R * c;
 }
 
-/**
- * Format distance for display
- */
+// Format distance to display
 export function formatDistance(meters: number): string {
   if (meters < 1000) {
     return `${Math.round(meters)} m`;
@@ -160,9 +153,7 @@ export function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-/**
- * Format duration for display
- */
+// Format duration to display
 export function formatDuration(seconds: number): string {
   if (seconds === 0) return "N/A";
   

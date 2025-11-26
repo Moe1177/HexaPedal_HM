@@ -99,7 +99,7 @@ export default function GuestDashboard() {
             startStationName: tripStatus.startStationName || undefined,
           });
 
-          // Restore destination if available
+          // Restore destination 
           if (
             tripStatus.destinationStationId &&
             tripStatus.destinationStationName &&
@@ -122,7 +122,7 @@ export default function GuestDashboard() {
     fetchCurrentTrip();
   }, [guestToken]);
 
-  // Live trip timer - updates every second
+  // Live trip timer 
   useEffect(() => {
     if (!activeTrip) {
       setElapsedTime(0);
@@ -232,8 +232,7 @@ export default function GuestDashboard() {
     if (selectedBikeId === null || selectedStationId === null || !guestToken) {
       return;
     }
-
-    // Use activeTrip.userId as fallback if userId from token is null/NaN
+    
     const userIdToUse = userId || activeTrip?.userId;
 
     if (!userIdToUse) {

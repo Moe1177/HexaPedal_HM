@@ -21,7 +21,6 @@ function OperatorDashboardContent() {
   const { reloadEntities } = useMapEntities();
   const [selectedStationForEdit, setSelectedStationForEdit] = useState<DockingStation | null>(null);
 
-  // Connect to WebSocket for real-time updates
   useEffect(() => {
     console.log("[Operator Dashboard] 🔌 Connecting to WebSocket...");
     

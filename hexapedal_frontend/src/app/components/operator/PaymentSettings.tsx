@@ -277,7 +277,7 @@ function PaymentSettingsContent() {
     try {
       const method = await getPaymentMethod();
       setPaymentMethod(method);
-      setShowForm(!method); // Show form if no payment method exists
+      setShowForm(!method);
     } catch (err) {
       console.error("Failed to load payment method:", err);
     } finally {

@@ -16,11 +16,11 @@ export default function TierNotification({ loyaltyStatus, onDismiss }: TierNotif
   const isDowngrade = loyaltyStatus.downgraded;
   const isTierChange = isUpgrade || isDowngrade;
   
-  // Use longer duration for progress notifications (15s vs 10s for tier changes)
+  // Use longer duration for notifications
   const autoDismissDuration = isTierChange ? 10000 : 15000;
 
   useEffect(() => {
-    // Show notification with a slight delay for animation
+    // Show notification 
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 100);
@@ -47,7 +47,7 @@ export default function TierNotification({ loyaltyStatus, onDismiss }: TierNotif
   const previousTierName = loyaltyStatus.previousTier ? getTierName(loyaltyStatus.previousTier) : "";
   const tierGradient = getTierColor(loyaltyStatus.currentTier);
 
-  // Render tier change notification (upgrade/downgrade) - only when hasNotification is true
+  // Render tier change notification when hasNotification is true
   if (isTierChange && loyaltyStatus.hasNotification) {
     return (
       <div
@@ -129,7 +129,7 @@ export default function TierNotification({ loyaltyStatus, onDismiss }: TierNotif
               </button>
             </div>
 
-            {/* Progress Bar (auto-dismiss indicator) */}
+            {/* Progress Bar*/}
             <div className="mt-3 h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
               <div 
                 className={`h-full bg-gradient-to-r ${tierGradient}`}
@@ -224,7 +224,7 @@ export default function TierNotification({ loyaltyStatus, onDismiss }: TierNotif
                   To reach {nextTierName} Tier:
                 </h5>
                 
-                {/* Show incomplete requirements prominently */}
+                {/* Show incomplete requirements*/}
                 {incompleteRequirements.length > 0 && (
                   <div className="space-y-2 mb-3">
                     {incompleteRequirements.map((criteria, index) => (
@@ -288,7 +288,7 @@ export default function TierNotification({ loyaltyStatus, onDismiss }: TierNotif
             </div>
           )}
 
-          {/* Progress Bar (auto-dismiss indicator) */}
+          {/* Progress Bar*/}
           <div className="mt-3 h-1 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
             <div 
               className={`h-full bg-gradient-to-r ${tierGradient}`}

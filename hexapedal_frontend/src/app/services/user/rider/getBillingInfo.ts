@@ -1,9 +1,6 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { BillingSummary, BillingHistory } from "@/types/Billing";
 
-/**
- * Backend BillingHistoryDto structure
- */
 interface BillingHistoryDto {
   rideId: number;
   startDateTime: string;
@@ -12,7 +9,7 @@ interface BillingHistoryDto {
   arrivalStation: string;
   distance: number;
   duration: number;
-  cost: number; // This is already the final cost after flex dollars
+  cost: number; 
   flexDollarsUsed: number;
 }
 
@@ -40,7 +37,7 @@ export async function getBillingInfo(token?: string | null): Promise<BillingSumm
 
   const rides: BillingHistoryDto[] = await response.json();
 
-  // Transform the rides array into BillingSummary format
+  // Transform the rides array into BillingSummary
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
@@ -61,19 +58,18 @@ export async function getBillingInfo(token?: string | null): Promise<BillingSumm
   }).length;
 
   // Map rides to billing history format
-  // The cost from backend is already the final cost after flex dollars are applied
   const billingHistory: BillingHistory[] = rides.map((ride, index) => ({
     id: ride.rideId || index + 1,
     date: ride.startDateTime,
     description: `Ride #${ride.rideId}${ride.originStation ? ` from ${ride.originStation}` : ""}${ride.arrivalStation ? ` to ${ride.arrivalStation}` : ""}${ride.flexDollarsUsed > 0 ? ` (${ride.flexDollarsUsed} flex dollars used)` : ""}`,
-    amount: ride.cost || 0, // Already the final cost after flex dollars
+    amount: ride.cost || 0,
     currency: "CAD",
     status: "paid" as const,
     type: "ride" as const,
   }));
 
   return {
-    currentPlan: null, // Will be set from subscription data
+    currentPlan: null,
     totalSpent,
     ridesThisMonth,
     ridesThisYear,

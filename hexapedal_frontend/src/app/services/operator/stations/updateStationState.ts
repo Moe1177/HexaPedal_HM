@@ -4,9 +4,7 @@ import {
   DockingStation,
 } from "@/types/DockingStation";
 
-/**
- * Updates a docking station's state
- */
+// Updates a docking station's state
 export async function updateStationState(
   stationId: number,
   request: UpdateStationStateRequest,

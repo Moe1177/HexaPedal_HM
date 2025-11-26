@@ -41,7 +41,7 @@ export default function GuestConversionModal({
       onDecline();
     } catch (err) {
       console.error("Failed to delete guest account:", err);
-      onDecline(); // Still close the modal
+      onDecline(); 
     }
   };
 
@@ -124,7 +124,7 @@ export default function GuestConversionModal({
 
       console.log("Email verified successfully, attempting login...");
 
-      // Now login with the credentials
+      // login with the credentials
       const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -154,7 +154,7 @@ export default function GuestConversionModal({
 
       alert("Account verified successfully! Welcome to HexaPedal!");
 
-      // Force full page reload to ensure all state is fresh
+      // Reload the page
       window.location.href = "/dashboard/rider";
     } catch (err) {
       const message =

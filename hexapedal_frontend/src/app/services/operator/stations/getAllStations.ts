@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { DockingStation } from "@/types/DockingStation";
 
-/**
- * Fetches all docking stations
- */
+// Gets all docking stations
 export async function getAllStations(token: string): Promise<DockingStation[]> {
   const response = await fetch(`${API_BASE_URL}/api/stations`, {
     method: "GET",

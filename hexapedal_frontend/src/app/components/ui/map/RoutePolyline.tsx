@@ -7,9 +7,7 @@ interface RoutePolylineProps {
   coordinates: RouteCoordinate[];
 }
 
-/**
- * Component to display a navigation route on the map as a colored polyline
- */
+// Displays a navigation route on the map as a colored polyline
 export default function RoutePolyline({ coordinates }: RoutePolylineProps) {
   // Convert RouteCoordinate[] to [lat, lng][] format for Leaflet
   const positions: [number, number][] = coordinates.map(coord => [coord.lat, coord.lng]);
@@ -23,7 +21,6 @@ export default function RoutePolyline({ coordinates }: RoutePolylineProps) {
 
   return (
     <>
-      {/* Shadow/outline for better visibility */}
       <Polyline
         positions={positions}
         pathOptions={{
@@ -34,11 +31,11 @@ export default function RoutePolyline({ coordinates }: RoutePolylineProps) {
           lineJoin: 'round',
         }}
       />
-      {/* Main route line - solid blue */}
+      {/* Main route line */}
       <Polyline
         positions={positions}
         pathOptions={{
-          color: '#3B82F6', // Nice blue color
+          color: '#3B82F6', 
           weight: 5,
           opacity: 0.9,
           lineCap: 'round',

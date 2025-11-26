@@ -44,7 +44,6 @@ export default function VerifyForm({ initialEmail = "" }: VerifyFormProps) {
       });
 
       if (!res.ok) {
-        // Prefer plain text (backend returns a string message on 400), fall back to status text
         let message = "Verification failed";
         try {
           const text = await res.text();
