@@ -77,7 +77,7 @@ public class StripeWebhookController {
             return ResponseEntity.ok("Webhook handled successfully");
 
         } catch (Exception e) {
-            System.err.println("❌ Error processing webhook: " + e.getMessage());
+            System.err.println("Error processing webhook: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error processing webhook");
@@ -103,10 +103,7 @@ public class StripeWebhookController {
             com.stripe.model.checkout.Session session = (com.stripe.model.checkout.Session) stripeObject;
             System.out.println("✅ Checkout session completed: " + session.getId());
             System.out.println("   Subscription ID: " + session.getSubscription());
-            
-            // The subscription is created automatically by Stripe
-            // We'll get a separate customer.subscription.created event
-            // that will save it to our database
+
         }
     }
 
@@ -137,32 +134,21 @@ public class StripeWebhookController {
      * Handle successful invoice payment
      */
     private void handleInvoicePaid(Event event) {
-        System.out.println("✅ Invoice paid successfully");
-        // You can add additional logic here, such as:
-        // - Sending confirmation emails
-        // - Updating analytics
-        // - Triggering notifications
+        System.out.println("Invoice paid successfully");
     }
 
     /**
      * Handle failed invoice payment
      */
     private void handleInvoicePaymentFailed(Event event) {
-        System.out.println("❌ Invoice payment failed");
-        // You can add additional logic here, such as:
-        // - Sending payment failure notifications to users
-        // - Updating subscription status
-        // - Retry logic
+        System.out.println("Invoice payment failed");
     }
 
     /**
      * Handle trial ending soon notification
      */
     private void handleTrialWillEnd(Event event) {
-        System.out.println("⏰ Trial will end soon");
-        // You can add additional logic here, such as:
-        // - Sending reminder emails to users
-        // - Prompting users to add payment method
+        System.out.println("Trial will end soon");
     }
 }
 

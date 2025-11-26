@@ -138,10 +138,7 @@ public class TruckService {
 
         return truckRepository.save(truck);
     }
-    
-    /**
-     * Refresh cached station and notify WebSocket listeners after bike dock/undock
-     */
+
     private void refreshAndNotifyCachedStation(Long stationId) {
         // Get fresh station data from database
         DockingStation freshStation = stationRepository.findById(stationId).orElse(null);
