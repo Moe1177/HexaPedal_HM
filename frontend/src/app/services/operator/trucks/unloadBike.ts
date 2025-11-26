@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { Truck } from "@/types/Truck";
 
-/**
- * Unloads a bike from a truck to a station
- */
+// Unloads a bike from a truck to a station
 export async function unloadBikeFromTruck(
   truckId: number,
   bikeId: number,

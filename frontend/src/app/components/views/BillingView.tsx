@@ -309,11 +309,8 @@ export default function BillingView() {
     setIsLoading(true);
     setError(null);
     try {
-      // Load subscription data
       const sub = await getCurrentSubscription(token);
       setSubscription(sub);
-
-      // Try to load billing info if available
       if (true) {
         try {
           console.log(token)
@@ -322,7 +319,6 @@ export default function BillingView() {
           setBillingInfo(data);
         } catch (err) {
           console.error("Failed to load billing info:", err);
-          // Continue without billing info
         }
       }
     } catch (err) {

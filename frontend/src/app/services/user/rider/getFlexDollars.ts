@@ -4,9 +4,7 @@ export interface FlexDollarsBalance {
   balance: number;
 }
 
-/**
- * Fetches the rider's current flex dollars balance
- */
+// Gets the rider's flex dollars balance
 export async function getFlexDollars(token: string): Promise<number> {
   const response = await fetch(`${API_BASE_URL}/api/flex-dollars/balance`, {
     method: "GET",

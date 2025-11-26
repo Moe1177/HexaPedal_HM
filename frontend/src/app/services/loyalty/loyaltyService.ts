@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../utils/constants";
 import { LoyaltyStatus } from "@/types/Loyalty";
 
-/**
- * Fetches the rider's current loyalty status
- */
+// Gets the loyalty status of the user
 export async function getLoyaltyStatus(token: string): Promise<LoyaltyStatus> {
   const response = await fetch(`${API_BASE_URL}/api/loyalty/status`, {
     method: "GET",
@@ -40,9 +38,7 @@ export async function getLoyaltyStatus(token: string): Promise<LoyaltyStatus> {
   return data;
 }
 
-/**
- * Manually evaluates/refreshes the rider's tier based on current stats
- */
+// Manually refreshes the rider's tier
 export async function evaluateTier(token: string): Promise<LoyaltyStatus> {
   const response = await fetch(`${API_BASE_URL}/api/loyalty/evaluate`, {
     method: "POST",
@@ -78,9 +74,7 @@ export async function evaluateTier(token: string): Promise<LoyaltyStatus> {
   return data;
 }
 
-/**
- * Dismisses a tier change notification
- */
+// Dismisses a tier change notification
 export async function dismissNotification(token: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api/loyalty/notification/dismiss`, {
     method: "POST",

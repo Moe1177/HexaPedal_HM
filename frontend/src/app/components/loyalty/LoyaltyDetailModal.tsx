@@ -14,7 +14,7 @@ export default function LoyaltyDetailModal({ loyaltyStatus, onClose, token }: Lo
   const [flexDollarsBalance, setFlexDollarsBalance] = useState<number | null>(null);
   const [isLoadingFlexDollars, setIsLoadingFlexDollars] = useState(false);
 
-  // Fetch flex dollars on mount
+  // Get the flex dollars once the page is loaded
   useEffect(() => {
     const fetchFlexDollars = async () => {
       if (!token) return;

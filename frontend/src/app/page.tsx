@@ -19,7 +19,6 @@ export default function LandingPage() {
       setPricingPlans(plans);
     } catch (error) {
       console.error("Failed to load pricing plans:", error);
-      // Set default plans on error
       setPricingPlans([]);
     } finally {
       setIsLoading(false);
@@ -118,7 +117,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 relative overflow-hidden">
-      {/* Falling Maple Leaves - Beautiful and Prominent */}
+      {/* Falling Maple Leaves*/}
       <div className="absolute top-60 left-1/4 opacity-40 dark:opacity-25 pointer-events-none animate-[fall_15s_linear_infinite]">
         <svg width="45" height="45" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 30 L15 20 L12 24 L8 20 L11 15 L6 12 L12 10 L10 5 L16 9 L18 3 L20 12 L22 3 L24 9 L30 5 L28 10 L34 12 L29 15 L32 20 L28 24 L25 20 L20 30 Z" fill="#ef4444"/>

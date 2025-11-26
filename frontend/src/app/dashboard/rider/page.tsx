@@ -38,7 +38,7 @@ interface ActiveTrip {
 interface ActiveReservation {
   bikeId: number;
   reservedAt: Date;
-  expiresAt?: Date; // Expiry time from backend
+  expiresAt?: Date; 
 }
 
 interface DestinationInfo {
@@ -169,7 +169,7 @@ export default function RiderDashboard() {
             startStationName: tripStatus.startStationName || undefined
           });
 
-          // Restore destination and route if available
+          // Restore destination and route
           if (tripStatus.destinationStationId &&
             tripStatus.destinationStationName &&
             tripStatus.destinationLatitude &&
@@ -224,11 +224,9 @@ export default function RiderDashboard() {
     const calculateTimeRemaining = () => {
       let expiryTime: number;
 
-      // Use expiresAt from backend if available (persistent across sessions)
       if (activeReservation.expiresAt) {
         expiryTime = activeReservation.expiresAt.getTime();
       } else {
-        // Fallback: calculate from reservedAt (for new reservations in current session)
         const reservationHoldMinutes = loyaltyStatus.reservationHoldMinutes || 10;
         expiryTime = new Date(activeReservation.reservedAt).getTime() + (reservationHoldMinutes * 60 * 1000);
       }
@@ -243,13 +241,13 @@ export default function RiderDashboard() {
     const initialRemaining = calculateTimeRemaining();
     setReservationTimeRemaining(initialRemaining);
 
-    // If already expired, trigger auto-expiration
+    // If already expired, trigger the expiration
     if (initialRemaining <= 0) {
       handleReservationExpiration();
       return;
     }
 
-    // Set up interval to update every second
+    // Set up interval to update the timer every second
     const intervalId = setInterval(() => {
       const remaining = calculateTimeRemaining();
       setReservationTimeRemaining(remaining);
@@ -263,7 +261,6 @@ export default function RiderDashboard() {
     return () => clearInterval(intervalId);
   }, [activeReservation, loyaltyStatus]);
 
-  // Periodic check to verify reservation status with backend (catches operator cancellations)
   useEffect(() => {
     if (!token || !activeReservation) return;
 
@@ -279,11 +276,9 @@ export default function RiderDashboard() {
           return;
         }
 
-        // Validate expiry time from backend
         if (reservationStatus.expiresAt) {
           const expiresAt = new Date(reservationStatus.expiresAt);
           if (expiresAt.getTime() <= Date.now()) {
-            // Reservation expired, clear it
             setActiveReservation(null);
             setReservationTimeRemaining(null);
             return;
@@ -299,9 +294,8 @@ export default function RiderDashboard() {
         }
       } catch (err) {
         console.error("Failed to verify reservation status:", err);
-        // Don't clear on error - might be temporary network issue
       }
-    }, 5000); // Check every 5 seconds
+    }, 5000);
 
     return () => clearInterval(checkInterval);
   }, [token, activeReservation]);
@@ -312,8 +306,7 @@ export default function RiderDashboard() {
     console.log("Reservation expired, marking as EXPIRED and re-evaluating tier...");
 
     try {
-      // Mark all expired reservations as EXPIRED (not CANCELLED)
-      // This ensures they count as missed reservations in loyalty calculation
+      // Mark all expired reservations as EXPIRED
       await expireReservations(token);
 
       // Re-evaluate tier after missed reservation
@@ -401,10 +394,9 @@ export default function RiderDashboard() {
     setIsLoading(true);
     setError(null);
     try {
-      // Store destination info
       setDestinationInfo({ stationId, stationName, latitude, longitude });
 
-      // Get start station coordinates BEFORE unlocking
+      // Get start station coordinates before unlocking
       const startStationCoords = await getStartStationCoordinates(activeReservation.bikeId);
 
       // Unlock the bike with destination data
@@ -415,14 +407,12 @@ export default function RiderDashboard() {
         longitude
       });
 
-      // Get the user ID from the bike after unlocking
       const userIdFromBike = await getUserIdFromBike(activeReservation.bikeId, token);
       if (!userIdFromBike) {
         throw new Error("Unable to get user ID from bike. Please try again.");
       }
 
       if (startStationCoords) {
-        // Fetch route
         try {
           console.log("Fetching route from:", startStationCoords, "to:", { latitude, longitude });
           const route = await getRoute(
@@ -473,7 +463,6 @@ export default function RiderDashboard() {
     try {
       await unlockBike(activeReservation.bikeId, token);
 
-      // Get the user ID from the bike after unlocking
       const userIdFromBike = await getUserIdFromBike(activeReservation.bikeId, token);
       if (!userIdFromBike) {
         throw new Error("Unable to get user ID from bike. Please try again.");
@@ -505,7 +494,7 @@ export default function RiderDashboard() {
 
       const stations = await response.json();
 
-      // Check each station to find which one has this bike
+      // Check each station to find the one with this bike
       for (const station of stations) {
         try {
           const bikesResponse = await fetch(`${API_BASE_URL}/api/stations/${station.id}/bikes`);
@@ -521,7 +510,6 @@ export default function RiderDashboard() {
             }
           }
         } catch (stationErr) {
-          // Continue checking other stations
           continue;
         }
       }
@@ -571,12 +559,12 @@ export default function RiderDashboard() {
       setShowReturnModal(false);
       setSelectedStationId(null);
 
-      // Clear navigation state
+      // Clear the navigation state
       setDestinationInfo(null);
       setRouteCoordinates(null);
       setRouteInfo(null);
 
-      // Fetch updated loyalty status after completing the trip
+      // Fetch the updated loyalty status after completing the trip
       if (token) {
         try {
           const updatedStatus = await getLoyaltyStatus(token);
@@ -613,8 +601,7 @@ export default function RiderDashboard() {
     try {
       const status = await evaluateTier(token);
       setLoyaltyStatus(status);
-
-      // Show notification if there's a tier change
+      
       if (status.hasNotification) {
         setShowTierNotification(true);
       }
@@ -630,7 +617,6 @@ export default function RiderDashboard() {
     try {
       await dismissNotification(token);
 
-      // Update local state to mark notification as shown
       if (loyaltyStatus) {
         setLoyaltyStatus({
           ...loyaltyStatus,
@@ -642,33 +628,30 @@ export default function RiderDashboard() {
     }
   };
 
-  // Helper function to format time remaining as MM:SS
+  // Function to format time remaining as MM:SS
   const formatTimeRemaining = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Helper function to get color classes based on time remaining
+  // Get the color classes based on time remaining
   const getTimerColorClasses = (seconds: number): { bg: string; border: string; text: string } => {
     const minutes = seconds / 60;
 
     if (minutes > 5) {
-      // Green - more than 5 minutes
       return {
         bg: "from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20",
         border: "border-emerald-200 dark:border-emerald-800",
         text: "text-emerald-700 dark:text-emerald-400"
       };
     } else if (minutes > 2) {
-      // Yellow - 2-5 minutes
       return {
         bg: "from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20",
         border: "border-amber-200 dark:border-amber-800",
         text: "text-amber-700 dark:text-amber-400"
       };
     } else {
-      // Red - less than 2 minutes
       return {
         bg: "from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20",
         border: "border-red-200 dark:border-red-800",

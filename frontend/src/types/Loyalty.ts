@@ -1,4 +1,3 @@
-// Loyalty tier types matching backend enums and DTOs
 
 export enum LoyaltyTier {
   NONE = "NONE",
@@ -37,7 +36,7 @@ export interface LoyaltyStatus {
   progress: TierProgress;
 }
 
-// Utility functions for tier display
+// Functions for tier display
 export function getTierColor(tier: LoyaltyTier): string {
   switch (tier) {
     case LoyaltyTier.BRONZE:

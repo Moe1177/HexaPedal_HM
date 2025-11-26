@@ -31,15 +31,12 @@ export default function MyRidesView() {
     setIsLoading(true);
     setError(null);
     try {
-      // getRides now uses /api/ride-history/me which is token-based
-      // userId parameter is optional and not used in the API call
       const data = await getRides(null, token);
       setRides(data || []);
     } catch (err) {
-      // If API doesn't exist yet, show empty state
       console.error("Failed to load rides:", err);
       setRides([]);
-      setError(null); // Don't show error, just show empty state
+      setError(null);
     } finally {
       setIsLoading(false);
     }

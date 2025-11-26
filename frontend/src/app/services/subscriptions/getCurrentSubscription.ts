@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../utils/constants";
 import { Subscription } from "@/types/Billing";
 
-/**
- * Fetches the current active subscription for the authenticated user
- */
+// Gets the current active subscription for the user
 export async function getCurrentSubscription(
   token: string
 ): Promise<Subscription | null> {

@@ -28,7 +28,7 @@ export interface StationDetails {
 
 export async function getStationDetails(stationId: number): Promise<StationDetails> {
   try {
-    // Step 1: Get station basic info
+    // Get station info
     const stationsResponse = await fetch(`${API_BASE_URL}/api/stations`, {
       method: "GET",
       headers: {
@@ -47,7 +47,7 @@ export async function getStationDetails(stationId: number): Promise<StationDetai
       throw new Error("Station not found");
     }
 
-    // Step 2: Get bikes at the station
+    // Get bikes at that station
     const bikesResponse = await fetch(`${API_BASE_URL}/api/stations/${stationId}/bikes`, {
       method: "GET",
       headers: {
@@ -60,7 +60,7 @@ export async function getStationDetails(stationId: number): Promise<StationDetai
       bikes = await bikesResponse.json();
     }
 
-    // Step 3: Get available (empty) docks
+    // Get available/empty docks of that station
     const availableDocksResponse = await fetch(`${API_BASE_URL}/api/stations/${stationId}/docks/available`, {
       method: "GET",
       headers: {
@@ -74,12 +74,9 @@ export async function getStationDetails(stationId: number): Promise<StationDetai
       availableDockIds = availableDocks.map((dock: any) => dock.id);
     }
 
-    // Step 4: Construct docks array
-    // We know the capacity, bikes, and empty dock IDs
-    // Note: We don't know which dock has which bike, but we can show all bikes and empty docks
     const docks: DockInfo[] = [];
     
-    // First, add all empty docks with their actual IDs
+    // Add all empty docks of the station
     availableDockIds.forEach((dockId: number) => {
       docks.push({
         id: dockId,
@@ -88,14 +85,10 @@ export async function getStationDetails(stationId: number): Promise<StationDetai
       });
     });
 
-    // Then, add docks with bikes
-    // Since we don't know the exact dock ID for each bike, we'll use a placeholder
-    // We'll use a high number (starting from 10000) to indicate it's a placeholder
-    // This allows the UI to display bikes even though we don't know their exact dock
     let placeholderDockId = 10000;
     bikes.forEach((bike: any) => {
       docks.push({
-        id: placeholderDockId++, // Placeholder - actual dock ID unknown, but bike is at the station
+        id: placeholderDockId++,
         bike: {
           id: bike.id,
           type: bike.type,
@@ -106,10 +99,6 @@ export async function getStationDetails(stationId: number): Promise<StationDetai
         empty: false,
       });
     });
-
-    // Ensure we have at least the capacity number of docks represented
-    // If we have fewer total docks than capacity, it means some docks might not be in the system yet
-    // or there's a mismatch - we'll use what we have
 
     return {
       id: station.id,

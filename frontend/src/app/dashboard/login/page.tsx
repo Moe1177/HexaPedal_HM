@@ -41,7 +41,7 @@ export default function LoginPage() {
       const token = response.token || localStorage.getItem("auth_token");
 
       const roles = getRoleFromToken(token);
-      const role = roles?.[0]?.authority; // safely get the authority value
+      const role = roles?.[0]?.authority;
 
       if (role === "ROLE_OPERATOR") {
         router.push("/dashboard/operator");

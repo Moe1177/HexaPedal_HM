@@ -1,17 +1,11 @@
 import { API_BASE_URL } from "../../utils/constants";
 
-/**
- * Bike interface for station bikes
- */
 export interface Bike {
   id: number;
   bikeStatus?: string;
-  // Add other bike properties as needed
 }
 
-/**
- * Fetches all bikes at a specific docking station
- */
+// Gets all bikes from a specific docking station
 export async function getStationBikes(
   stationId: number,
   token: string

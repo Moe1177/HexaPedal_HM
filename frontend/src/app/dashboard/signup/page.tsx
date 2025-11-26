@@ -106,7 +106,7 @@ function SignUpFormInner() {
     if (!state.trim()) return "State/Province is required";
     if (!postalCode.trim()) return "Postal code is required";
 
-    // Terms and conditions validation
+  // Terms and conditions validation
     if (!agreedToTerms)
       return "You must agree to the Terms of Service and Privacy Policy";
 
@@ -146,7 +146,7 @@ function SignUpFormInner() {
 
     setIsSubmitting(true);
     try {
-      // Step 1: Create Stripe Payment Method
+      // Create the payment method
       const card = elements.getElement(CardElement);
       if (!card) {
         setErrorMessage("Card element not found");
@@ -179,7 +179,7 @@ function SignUpFormInner() {
         return;
       }
 
-      // Step 2: Send user and payment info to backend
+      // Send  the user and payment info to the backend
       const payload: RegisterPayload = {
         fullName,
         address,

@@ -1,8 +1,6 @@
 import { API_BASE_URL } from "../../utils/constants";
 
-/**
- * Deletes a docking station
- */
+// Deletes a docking station
 export async function deleteStation(
   stationId: number,
   token: string

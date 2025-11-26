@@ -76,12 +76,10 @@ export default function StationDetailsModal({
       if (onReserveBike) {
         onReserveBike(bikeId);
       }
-      // Show success message
       setError(null);
-      // Refresh station details to show updated bike status
+      // Refresh station
       const updated = await getStationDetails(stationId!);
       setStationDetails(updated);
-      // Show success alert
       alert(
         `Bike #${bikeId} reserved successfully! You have 10 minutes to unlock it.`
       );
@@ -89,7 +87,7 @@ export default function StationDetailsModal({
       const errorMessage =
         err instanceof Error ? err.message : "Failed to reserve bike";
 
-      // If error indicates user already has a reservation, provide helpful message
+      // Error to show to the user if they already have a reservation
       if (
         errorMessage.toLowerCase().includes("already has a reserved bike") ||
         errorMessage.toLowerCase().includes("already has a reservation")

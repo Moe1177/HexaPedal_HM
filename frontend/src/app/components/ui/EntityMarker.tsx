@@ -22,28 +22,21 @@ interface EntityMarkerProps {
     onDelete?: (stationId: number) => void;
 }
 
-// Create custom colored icons based on station fullness (DM-03)
-// Color scheme based on fullness percentage:
-// - Red (#ef4444): 0% or 100% fullness (empty/full)
-// - Yellow (#eab308): <25% or >85% fullness (almost empty/almost full)
-// - Green (#10b981): 25%-85% fullness (balanced)
+// Custom colored icons based on station fullness
 const createColoredIcon = (numberOfBikesDocked?: number, bikeCapacity?: number) => {
-    let color = '#10b981'; // default green (balanced)
+    let color = '#10b981';
     
     if (numberOfBikesDocked !== undefined && bikeCapacity !== undefined && bikeCapacity > 0) {
         const fullnessPercent = (numberOfBikesDocked / bikeCapacity) * 100;
         
-        // Red: 0% or 100%
         if (fullnessPercent === 0 || fullnessPercent === 100) {
-            color = '#ef4444'; // red
+            color = '#ef4444';
         }
-        // Yellow: <25% or >85%
         else if (fullnessPercent < 25 || fullnessPercent > 85) {
             color = '#eab308'; // yellow
         }
-        // Green: 25%-85% (balanced)
         else {
-            color = '#10b981'; // green
+            color = '#10b981';
         }
     }
 
@@ -72,7 +65,7 @@ export default function EntityMarker({
         }
     };
 
-    // Use colored icon for stations based on fullness
+    // Color the icon for stations based on fullness
     const icon = entity.type === "station" 
         ? createColoredIcon(entity.numberOfBikesDocked, entity.bikeCapacity) 
         : undefined;

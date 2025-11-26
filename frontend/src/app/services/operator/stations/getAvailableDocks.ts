@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { AvailableDocksResponse } from "@/types/DockingStation";
 
-/**
- * Fetches available docks at a specific station
- */
+// Gets available docks from a specific station
 export async function getAvailableDocks(
   stationId: number,
   token: string

@@ -123,13 +123,11 @@ function GuestPaymentFormInner({
         cardholderName
       );
 
-      // Small delay to ensure database transaction is fully committed
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Start the trip after guest session is created and committed
+      // Start the trip after guest session is created
       await startGuestTrip(bikeId, guestSession.token);
 
-      // Success - call the parent callback with the guest token
       onSuccess(guestSession.token);
     } catch (err) {
       const message =

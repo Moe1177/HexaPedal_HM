@@ -32,7 +32,6 @@ export interface BillingSummary {
   billingHistory: BillingHistory[];
 }
 
-// Backend DTOs
 export interface PricingPlan {
   id: number;
   planType: PlanType;

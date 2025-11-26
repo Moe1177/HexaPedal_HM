@@ -1,9 +1,6 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { Trip } from "@/types/Trip";
 
-/**
- * Backend Rides model structure from the API (RideHistoryDto)
- */
 interface BackendRide {
   ride_id: number;
   bikeId: number | null;
@@ -17,13 +14,10 @@ interface BackendRide {
   flexDollarsUsed: number | null;
 }
 
-/**
- * Maps backend Rides model to frontend Trip interface
- */
 function mapBackendRideToTrip(backendRide: BackendRide): Trip {
   const hasEnded = backendRide.endTimestamp != null;
 
-  // Generate simple numeric IDs from location strings (hash-based approach)
+  // Generate IDs from location strings
   const startStationId = Math.abs(hashString(backendRide.startLocation));
   const endStationId = hasEnded
     ? Math.abs(hashString(backendRide.endLocation))
@@ -32,7 +26,7 @@ function mapBackendRideToTrip(backendRide: BackendRide): Trip {
   return {
     id: backendRide.ride_id,
     bikeId: backendRide.bikeId ?? undefined,
-    userId: 0, // Not provided by backend, will be set from token
+    userId: 0, 
     startStationId,
     startStationName: backendRide.startLocation,
     endStationId,
@@ -85,7 +79,6 @@ export async function getRides(
   // Map backend rides to frontend Trip format
   const trips = data.map((ride) => {
     const trip = mapBackendRideToTrip(ride);
-    // Set userId from parameter if provided, otherwise use 0 as placeholder
     trip.userId = userId ?? 0;
     return trip;
   });

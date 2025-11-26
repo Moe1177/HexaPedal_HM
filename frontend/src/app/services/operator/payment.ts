@@ -24,9 +24,7 @@ export interface AddPaymentMethodRequest {
   billingAddress: BillingAddress;
 }
 
-/**
- * Get the current user's payment method
- */
+// Get the current user's payment method
 export async function getPaymentMethod(): Promise<PaymentMethodResponse | null> {
   const token = localStorage.getItem("auth_token");
   if (!token) {
@@ -43,7 +41,7 @@ export async function getPaymentMethod(): Promise<PaymentMethodResponse | null> 
 
   if (!response.ok) {
     if (response.status === 404) {
-      return null; // No payment method found
+      return null; 
     }
     throw new Error("Failed to fetch payment method");
   }
@@ -51,9 +49,7 @@ export async function getPaymentMethod(): Promise<PaymentMethodResponse | null> 
   return await response.json();
 }
 
-/**
- * Add a new payment method for the current user
- */
+// Add a new payment method for the current user
 export async function addPaymentMethod(
   paymentMethodId: string,
   cardholderName: string,

@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { CreateStationRequest, DockingStation } from "@/types/DockingStation";
 
-/**
- * Creates a new docking station
- */
+// Creates a new docking station
 export async function createStation(
   request: CreateStationRequest,
   token: string

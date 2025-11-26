@@ -1,9 +1,7 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { Bike, BikeStatus } from "@/types/Bike";
 
-/**
- * Updates a bike's status
- */
+// Updates a bike's status
 export async function updateBikeStatus(
   bikeId: number,
   status: BikeStatus,

@@ -1,16 +1,14 @@
 import { API_BASE_URL } from "../../utils/constants";
 import { Bike } from "@/types/Bike";
 
-/**
- * Creates a new bike and docks it at a specific station/dock
- */
+// Creates a new bike and docks it at a specific station/dock
 export async function createBike(
   type: string,
   stationId: number,
   dockId: number,
   token: string
 ): Promise<Bike> {
-  // Step 1: Create the bike
+  // Create bike
   const createResponse = await fetch(`${API_BASE_URL}/api/bikes`, {
     method: "POST",
     headers: {
@@ -29,7 +27,7 @@ export async function createBike(
 
   const bike: Bike = await createResponse.json();
 
-  // Step 2: Dock the bike at the specified station/dock
+  // Dock bike at the specified station/dock
   const dockResponse = await fetch(
     `${API_BASE_URL}/api/docks/${stationId}/${dockId}/bike/${bike.id}`,
     {
