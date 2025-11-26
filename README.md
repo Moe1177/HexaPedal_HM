@@ -1,7 +1,5 @@
 # HexaPedal_HM — Bike Sharing System
 
-## SOEN 343 — Software Architecture and Design
-
 HexaPedal_HM is a bike-sharing system implementation designed and developed as part of the **SOEN 343 (Software Architecture and Design)** course at Concordia University.
 
 This project places a strong emphasis on **software architecture**, **design decisions**, and the production of **technical artifacts**, all of which can be found in the [`/artifacts`](./artifacts) folder.
