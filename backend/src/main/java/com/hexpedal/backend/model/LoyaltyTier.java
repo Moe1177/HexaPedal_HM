@@ -1,6 +1,5 @@
 package com.hexpedal.backend.model;
 
-import java.math.BigDecimal;
 
 public enum LoyaltyTier {
     NONE(0, 0.0, 0),

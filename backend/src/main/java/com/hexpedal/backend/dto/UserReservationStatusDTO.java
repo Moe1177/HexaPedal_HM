@@ -1,4 +1,3 @@
-// e.g. src/main/java/com/hexpedal/backend/dto/UserReservationStatusDto.java
 package com.hexpedal.backend.dto;
 
 import java.time.LocalDateTime;

@@ -32,7 +32,6 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 @AllArgsConstructor
 public class ReservationService {
-    //private static final int HOLD_MINUTES = 10;
     private final UserRepository userRepo;
     private final BikeRepository bikeRepo;
     private final DockRepository dockRepo;
@@ -244,8 +243,6 @@ public class ReservationService {
             }
         }
 
-        // create and save ride (R-PRC-04: maintain log of all trips and charges)
-        // Save the final cost (after flex dollars) as this is what the user actually paid
         Rides ride = new Rides();
         ride.setUser(user);
         ride.setBike(bike);
@@ -259,10 +256,8 @@ public class ReservationService {
         ride.setFlexDollarsUsed(flexDollarsUsed);
         ridesRepo.save(ride);
 
-        // Check subscription status to determine proper messaging
         boolean hasActiveSubscription = userSubscriptionRepository.hasActiveSubscription(userId);
 
-        // Automatically charge payment if finalCostToCharge > 0 (after flex dollars applied)
         if (finalCostToCharge > 0) {
             try {
                 paymentService.chargeForTrip(
@@ -271,20 +266,20 @@ public class ReservationService {
                         String.format("Bike trip #%d: %s to %s (%.1f minutes)",
                                 ride.getRide_id(), startLocation, endLocation, durationMinutes)
                 );
-                System.out.println("💳 Charged $" + String.format("%.2f", finalCostToCharge) + " CAD for trip #" + ride.getRide_id());
+                System.out.println("Charged $" + String.format("%.2f", finalCostToCharge) + " CAD for trip #" + ride.getRide_id());
             } catch (Exception e) {
-                System.err.println("⚠️ Failed to charge for trip #" + ride.getRide_id() + ": " + e.getMessage());
+                System.err.println("Failed to charge for trip #" + ride.getRide_id() + ": " + e.getMessage());
             }
         } else {
             // finalCostToCharge is 0 - determine why
             if (hasActiveSubscription && cost == 0) {
-                System.out.println("✅ Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
+                System.out.println("Trip #" + ride.getRide_id() + " covered by active subscription (no charge)");
             } else if (flexDollarsUsed > 0) {
-                System.out.println("✅ Trip #" + ride.getRide_id() + " fully covered by flex dollars (no charge)");
+                System.out.println("Trip #" + ride.getRide_id() + " fully covered by flex dollars (no charge)");
             } else if (cost == 0) {
-                System.out.println("✅ Trip #" + ride.getRide_id() + " free (very short trip, no charge)");
+                System.out.println("Trip #" + ride.getRide_id() + " free (very short trip, no charge)");
             } else {
-                System.out.println("✅ Trip #" + ride.getRide_id() + " completed (no charge)");
+                System.out.println("Trip #" + ride.getRide_id() + " completed (no charge)");
             }
         }
 

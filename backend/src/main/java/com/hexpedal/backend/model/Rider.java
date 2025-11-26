@@ -1,4 +1,3 @@
-// src/main/java/com/hexpedal/backend/model/Rider.java
 package com.hexpedal.backend.model;
 
 import jakarta.persistence.DiscriminatorValue;

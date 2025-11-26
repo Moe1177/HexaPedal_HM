@@ -29,7 +29,6 @@ public class RoutingController {
             @RequestParam double endLng
     ) {
         try {
-            // Try cycling-regular profile first (best for bike sharing)
             String bikeUrl = String.format(
                 "https://api.openrouteservice.org/v2/directions/cycling-regular?api_key=%s&start=%f,%f&end=%f,%f",
                 orsApiKey, startLng, startLat, endLng, endLat
@@ -41,11 +40,9 @@ public class RoutingController {
                     return ResponseEntity.ok(bikeResponse.getBody());
                 }
             } catch (Exception e) {
-                // If bike profile fails, try driving profile
                 System.out.println("Bike routing failed, trying driving profile: " + e.getMessage());
             }
-            
-            // Fallback to driving-car profile
+
             String drivingUrl = String.format(
                 "https://api.openrouteservice.org/v2/directions/driving-car?api_key=%s&start=%f,%f&end=%f,%f",
                 orsApiKey, startLng, startLat, endLng, endLat

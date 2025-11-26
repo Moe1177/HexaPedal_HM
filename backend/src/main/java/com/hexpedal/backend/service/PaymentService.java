@@ -57,7 +57,7 @@ public class PaymentService {
         com.stripe.model.Customer updated = com.stripe.model.Customer.retrieve(customerId)
                 .update(Map.of("invoice_settings", invoiceSettings));
 
-        // Extract safe card details for your DB
+
         com.stripe.model.PaymentMethod.Card card = pm.getCard();
 
         PaymentMethod entity = PaymentMethod.builder()
@@ -219,15 +219,6 @@ public class PaymentService {
         // After creating subscription
         com.stripe.model.Invoice invoice = stripeSubscription.getLatestInvoiceObject();
         com.stripe.model.PaymentIntent paymentIntent = invoice.getPaymentIntentObject();
-
-//        if (paymentIntent != null) {
-//            Map<String, Object> confirmParams = new HashMap<>();
-//            confirmParams.put("payment_method", paymentIntent.getPaymentMethod());
-//            paymentIntent.confirm(confirmParams);
-//
-//            // Refresh the subscription from Stripe
-//            stripeSubscription = com.stripe.model.Subscription.retrieve(stripeSubscription.getId());
-//        }
 
 
         // Save subscription in database

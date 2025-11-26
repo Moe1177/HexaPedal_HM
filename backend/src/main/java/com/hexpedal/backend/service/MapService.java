@@ -27,7 +27,6 @@ public class MapService implements MapEntityListener {
      */
     public void update(MapEntity state) {
         messagingTemplate.convertAndSend("/bms/live-updates", state);
-        // TODO: Remove Debug log
         System.out.println("Updated the map with this updated state: " + state);
     }
 
